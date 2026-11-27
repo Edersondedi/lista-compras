@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { extrairChave, lerPaginaNfce, lerTextoNfce, pareceQrNfce } from '../src/lib/nfce';
+import { extrairChave, lerPaginaNfce, lerTextoNfce, nomeDoMercado, pareceQrNfce, SEM_NOME } from '../src/lib/nfce';
 
 // Página sintética no layout "padrão" dos portais de consulta da NFC-e.
 // Precisa ser substituída por uma página real de SC para validar o parser.
@@ -76,5 +76,22 @@ describe('NFC-e', () => {
       { descricao: 'LIMAO TAITI kg', quantidade: 0.615, unidade: 'KG', valorUnitario: 14.99, valorTotal: 9.22 },
       { descricao: 'CAFE TORRADO 500G', quantidade: 2, unidade: 'UN', valorUnitario: 21.9, valorTotal: 43.8, codigo: '7891234567895' },
     ]);
+  });
+
+  const item = 'ARROZ T1 5KG (Código: 123 )\nQtde.:1UN: UN1Vl. Unit.:   26,9\tVl. Total\n26,90';
+
+  it('acha o nome pela linha antes do CNPJ e converte para o nome da rede', () => {
+    const n = lerTextoNfce(`KOCH HIPERMERCADO S/A LJ 89 - BLUMENAU\nCNPJ: 02.000.000/0001-00\nRUA X , SC\n${item}`)!;
+    expect(n.mercado).toBe('Koch');
+  });
+
+  it('sem cabeçalho, marca como nome não lido', () => {
+    expect(lerTextoNfce(item)!.mercado).toBe(SEM_NOME);
+  });
+
+  it('nomes das redes', () => {
+    expect(nomeDoMercado('KOMPRAO KOCH ATACADISTA LTDA')).toBe('Komprão');
+    expect(nomeDoMercado('COOPERATIVA DE CONSUMO')).toBe('Cooper');
+    expect(nomeDoMercado('MERCADO DO BAIRRO')).toBe('MERCADO DO BAIRRO');
   });
 });

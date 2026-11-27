@@ -3,21 +3,31 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { confirmar } from '../confirmar';
-import { casa, numeroOuNulo, reais } from '../lib/logic';
-import { buscarNfce, lerTextoNfce, NotaLida, pareceQrNfce } from '../lib/nfce';
+import { casa, mercadosConhecidos, numeroOuNulo, reais } from '../lib/logic';
+import { buscarNfce, lerTextoNfce, NotaLida, pareceQrNfce, SEM_NOME } from '../lib/nfce';
 import { ItemNota } from '../lib/types';
 import { useLoja } from '../store';
-import { Aviso, Botao, Campo, Cartao, Secao, cores, s } from '../ui';
+import { Aviso, Botao, Campo, Cartao, Chip, Secao, cores, s } from '../ui';
 
 type Modo = 'inicio' | 'camera' | 'lendo' | 'manual';
 
 export default function TelaNota() {
-  const { notas, lista, salvarNota, removerNota, alternarComprado } = useLoja();
+  const { notas, lista, ofertas, clubes, salvarNota, removerNota, renomearMercado, alternarComprado } = useLoja();
   const [permissao, pedirPermissao] = useCameraPermissions();
   const [modo, setModo] = useState<Modo>('inicio');
   const [msg, setMsg] = useState<string | null>(null);
   const travado = useRef(false);
   const [link, setLink] = useState('');
+  const [editando, setEditando] = useState<string | null>(null);
+  const [nomeEdit, setNomeEdit] = useState('');
+  const sugestoesMercado = [...new Set([...mercadosConhecidos(notas, ofertas), ...clubes, 'Cooper', 'Koch', 'Unidos', 'Fort'])].filter(
+    (m) => m !== SEM_NOME,
+  );
+
+  function abrirEdicao(id: string, atual: string) {
+    setEditando(id);
+    setNomeEdit(atual === SEM_NOME ? '' : atual);
+  }
 
   // entrada manual
   const [mercado, setMercado] = useState('');
@@ -50,10 +60,15 @@ export default function TelaNota() {
   }
 
   function salvarLida(lida: NotaLida, origem: 'qrcode' | 'manual', url?: string) {
-    salvarNota({ mercado: lida.mercado, data: lida.data ?? new Date().toISOString(), itens: lida.itens, total: lida.total, origem, ...(url ? { url } : {}) });
+    const nova = salvarNota({ mercado: lida.mercado, data: lida.data ?? new Date().toISOString(), itens: lida.itens, total: lida.total, origem, ...(url ? { url } : {}) });
     const marcados = marcarItensDaLista(lida.itens);
     setModo('inicio');
-    setMsg(`Nota de ${lida.mercado} salva: ${lida.itens.length} itens, ${reais(lida.total)}. ${marcados} itens da lista marcados como comprados.`);
+    if (lida.mercado === SEM_NOME) {
+      abrirEdicao(nova.id, lida.mercado);
+      setMsg(`Nota salva: ${lida.itens.length} itens, ${reais(lida.total)}. Não consegui ler o nome do mercado: escolha ou digite abaixo, no histórico.`);
+    } else {
+      setMsg(`Nota de ${lida.mercado} salva: ${lida.itens.length} itens, ${reais(lida.total)}. ${marcados} itens da lista marcados como comprados.`);
+    }
   }
 
   function lerColado() {
@@ -192,17 +207,34 @@ export default function TelaNota() {
         {notas.length > 0 && (
           <Secao titulo={`Histórico (${notas.length} ${notas.length === 1 ? "compra" : "compras"})`}>
             <Cartao>
-              {notas.map((n) => (
+              {notas.map((n) => editando === n.id ? (
+                <View key={n.id} style={[s.linha, { flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
+                  <Campo rotulo={`Mercado desta compra (${n.itens.length} itens, ${reais(n.total)})`} value={nomeEdit} onChangeText={setNomeEdit} placeholder="Ex.: Koch" />
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {sugestoesMercado.map((m) => (
+                      <Chip key={m} texto={m} ativo={m === nomeEdit} onPress={() => setNomeEdit(m)} />
+                    ))}
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <View style={{ flex: 1 }}><Botao tipo="secundario" titulo="Cancelar" onPress={() => setEditando(null)} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Botao titulo="Salvar nome" desabilitado={!nomeEdit.trim()} onPress={() => { renomearMercado(n.id, nomeEdit); setEditando(null); setMsg(null); }} />
+                    </View>
+                  </View>
+                </View>
+              ) : (
                 <Pressable
                   key={n.id}
                   accessibilityRole="button"
+                  accessibilityHint="Toque para renomear o mercado; segure para excluir"
+                  onPress={() => abrirEdicao(n.id, n.mercado)}
                   onLongPress={() =>
                     confirmar('Excluir compra', `Apagar a compra de ${n.mercado}? Os preços dela saem da comparação.`, 'Excluir', () => removerNota(n.id))
                   }
                   style={s.linha}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={s.textoItem}>{n.mercado}</Text>
+                    <Text style={[s.textoItem, n.mercado === SEM_NOME && { color: cores.alertaTexto }]}>{n.mercado}</Text>
                     <Text style={s.detalhe}>
                       {n.data.slice(8, 10)}/{n.data.slice(5, 7)} · {n.itens.length} itens · {n.origem === 'qrcode' ? 'QR Code' : 'digitada'}
                     </Text>
@@ -211,7 +243,7 @@ export default function TelaNota() {
                 </Pressable>
               ))}
             </Cartao>
-            <Text style={[s.detalhe, { textAlign: 'center' }]}>Segure uma compra para excluir</Text>
+            <Text style={[s.detalhe, { textAlign: 'center' }]}>Toque numa compra para renomear o mercado · segure para excluir</Text>
           </Secao>
         )}
       </ScrollView>

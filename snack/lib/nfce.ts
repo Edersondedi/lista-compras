@@ -9,6 +9,26 @@ import { ItemNota } from './types';
  * `lerPaginaNfce` devolve null e o app oferece a digitação manual.
  */
 
+/** Redes conhecidas: o nome da razão social vira o nome curto do mercado. */
+const REDES: [RegExp, string][] = [
+  [/\bCOOPER\b|COOPERATIVA/i, 'Cooper'],
+  [/KOMPR[ÃA]O/i, 'Komprão'],
+  [/\bKOCH\b/i, 'Koch'],
+  [/\bFORT\b|GRUPO PEREIRA|COMERCIAL PEREIRA/i, 'Fort'],
+  [/\bUNIDOS\b/i, 'Unidos'],
+  [/ANGELONI/i, 'Angeloni'],
+  [/GIASSI/i, 'Giassi'],
+  [/BISTEK/i, 'Bistek'],
+  [/ATACAD[ÃA]O/i, 'Atacadão'],
+];
+
+export function nomeDoMercado(razaoSocial: string): string {
+  for (const [re, nome] of REDES) if (re.test(razaoSocial)) return nome;
+  return razaoSocial.trim();
+}
+
+export const SEM_NOME = 'Mercado (nome não lido)';
+
 export interface NotaLida {
   mercado: string;
   data?: string; // ISO
@@ -77,7 +97,7 @@ export function lerPaginaNfce(html: string): NotaLida | null {
   if (itens.length === 0) return null;
 
   const lojaM = html.match(/<div[^>]*id=["']u20["'][^>]*>([\s\S]*?)<\/div>/i);
-  const mercado = lojaM ? semTags(lojaM[1]) : 'Mercado (nome não lido)';
+  const mercado = lojaM ? nomeDoMercado(semTags(lojaM[1])) : SEM_NOME;
 
   const texto = semTags(html);
   const dataM = texto.match(/Emiss[ãa]o:?\s*(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2}(?::\d{2})?)?/i);
@@ -115,8 +135,13 @@ export function lerTextoNfce(texto: string): NotaLida | null {
   }
   if (itens.length === 0) return null;
 
-  const lojaM = t.match(/ELETR[ÔO]NICA\s*\n+\s*([^\n]+)/i);
-  const mercado = lojaM ? lojaM[1].trim() : 'Mercado (nome não lido)';
+  const lojaM = t.match(/ELETR[ÔO]NICA\s*\n+\s*([^\n]+)/i) ?? t.match(/([^\n]+)\s*\n\s*CNPJ/i);
+  let mercado = lojaM ? nomeDoMercado(lojaM[1]) : SEM_NOME;
+  if (mercado === SEM_NOME) {
+    // último recurso: alguma rede conhecida mencionada em qualquer parte do texto
+    const rede = REDES.find(([re]) => re.test(t));
+    if (rede) mercado = rede[1];
+  }
   const dataM = t.match(/Emiss[ãa]o:?\s*(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2}(?::\d{2})?)?/i);
   const data = dataM ? `${dataM[3]}-${dataM[2]}-${dataM[1]}T${(dataM[4] ?? '12:00').padEnd(8, ':00').slice(0, 8)}` : undefined;
   const totalM = t.match(/Valor a pagar R\$:?\s*([\d.,]+)/i) ?? t.match(/Valor total R\$:?\s*([\d.,]+)/i);
