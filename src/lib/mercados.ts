@@ -15,11 +15,11 @@ export interface Mercado {
 const enc = encodeURIComponent;
 // Links conferidos manualmente em 27/11/2026 (busca por "arroz" abriu a lista de produtos com preço).
 export const MERCADOS: Mercado[] = [
-  { nome: 'Cooper', site: 'minhacooper.com.br', tiendeo: 'cooper' }, // busca exige CEP; link direto não identificado
+  { nome: 'Cooper', busca: (q) => `https://www.minhacooper.com.br/s?q=${enc(q)}`, tiendeo: 'cooper' },
   { nome: 'Koch', busca: (q) => `https://www.superkoch.com.br/busca/${enc(q)}`, tiendeo: 'supermercados-koch' },
   { nome: 'Unidos' },
   { nome: 'Fort', busca: (q) => `https://www.fortatacadista.com.br/busca/${enc(q)}`, tiendeo: 'fort-atacadista' },
-  { nome: 'Rede Top', tiendeo: 'rede-top' },
+  { nome: 'Rede Top', busca: (q) => `https://www.redetoponline.com.br/busca?termo=${enc(q)}`, tiendeo: 'rede-top' },
   { nome: 'Brasil Atacadista', tiendeo: 'brasil-atacadista' }, // sem loja online (ofertas por WhatsApp)
   { nome: 'Atacadão', busca: (q) => `https://www.atacadao.com.br/s?q=${enc(q)}`, tiendeo: 'atacadao' },
   { nome: 'Giassi', busca: (q) => `https://www.giassi.com.br/${enc(q)}?_q=${enc(q)}&map=ft`, tiendeo: 'giassi-supermercados' },
