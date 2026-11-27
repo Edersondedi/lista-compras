@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { confirmar } from '../confirmar';
 import { casa, numeroOuNulo, reais } from '../lib/logic';
-import { buscarNfce, pareceQrNfce } from '../lib/nfce';
+import { buscarNfce, lerTextoNfce, NotaLida, pareceQrNfce } from '../lib/nfce';
 import { ItemNota } from '../lib/types';
 import { useLoja } from '../store';
 import { Aviso, Botao, Campo, Cartao, Secao, cores, s } from '../ui';
@@ -49,6 +49,27 @@ export default function TelaNota() {
     return marcados;
   }
 
+  function salvarLida(lida: NotaLida, origem: 'qrcode' | 'manual', url?: string) {
+    salvarNota({ mercado: lida.mercado, data: lida.data ?? new Date().toISOString(), itens: lida.itens, total: lida.total, origem, ...(url ? { url } : {}) });
+    const marcados = marcarItensDaLista(lida.itens);
+    setModo('inicio');
+    setMsg(`Nota de ${lida.mercado} salva: ${lida.itens.length} itens, ${reais(lida.total)}. ${marcados} itens da lista marcados como comprados.`);
+  }
+
+  function lerColado() {
+    const texto = link.trim();
+    if (!texto) return;
+    if (pareceQrNfce(texto) && !texto.includes('\n')) {
+      travado.current = false;
+      aoLer(texto);
+    } else {
+      const lida = lerTextoNfce(texto);
+      if (lida) salvarLida(lida, 'qrcode');
+      else setMsg('Não encontrei itens nesse texto. Copie a página inteira da nota (Selecionar tudo > Copiar) e cole de novo.');
+    }
+    setLink('');
+  }
+
   async function aoLer(conteudo: string) {
     if (travado.current) return;
     travado.current = true;
@@ -66,14 +87,16 @@ export default function TelaNota() {
         setMsg(`QR Code lido, mas não consegui extrair os itens da página da Sefaz (layout diferente do esperado). Me mande este link para eu ajustar: ${conteudo}`);
         return;
       }
-      salvarNota({ mercado: lida.mercado, data: lida.data ?? new Date().toISOString(), itens: lida.itens, total: lida.total, origem: 'qrcode', url: conteudo });
-      const marcados = marcarItensDaLista(lida.itens);
-      setModo('inicio');
-      setMsg(`Nota de ${lida.mercado} salva: ${lida.itens.length} itens, ${reais(lida.total)}. ${marcados} itens da lista marcados como comprados.`);
+      salvarLida(lida, 'qrcode', conteudo);
     } catch (e) {
       setModo('manual');
-      const motivo = Platform.OS === 'web' ? 'no navegador o acesso ao portal da Sefaz é bloqueado' : (e as Error).message;
-      setMsg(`QR Code lido, mas não consegui abrir a página da nota (${motivo}). Digite os itens abaixo. Link: ${conteudo}`);
+      if (Platform.OS === 'web') {
+        setModo('inicio');
+        setMsg(`O navegador não deixa o app abrir a página da Sefaz. Faça assim: abra o link abaixo no Safari, toque e segure no texto > Selecionar tudo > Copiar, e cole no campo "Cole o link ou o texto da nota". Link: ${conteudo}`);
+      } else {
+        setModo('manual');
+        setMsg(`QR Code lido, mas não consegui abrir a página da nota (${(e as Error).message}). Cole o texto da página ou digite os itens. Link: ${conteudo}`);
+      }
     }
   }
 
@@ -129,17 +152,13 @@ export default function TelaNota() {
             <Botao titulo="Escanear QR Code da nota" onPress={abrirCamera} />
             {modo !== 'manual' && <Botao tipo="secundario" titulo="Digitar compra manualmente" onPress={() => setModo('manual')} />}
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
-              <Campo rotulo="Ou cole o link da nota (do QR Code)" value={link} onChangeText={setLink} placeholder="https://sat.sef.sc.gov.br/..." autoCapitalize="none" autoCorrect={false} />
+              <Campo rotulo="Cole o link ou o texto da nota" value={link} onChangeText={setLink} placeholder="Link do QR Code ou texto copiado da página da nota" autoCapitalize="none" autoCorrect={false} multiline style={{ maxHeight: 120, paddingTop: 10 }} />
               <View style={{ width: 90 }}>
                 <Botao
                   tipo="secundario"
                   titulo="Ler"
                   desabilitado={!link.trim()}
-                  onPress={() => {
-                    travado.current = false;
-                    aoLer(link);
-                    setLink('');
-                  }}
+                  onPress={lerColado}
                 />
               </View>
             </View>
@@ -171,7 +190,7 @@ export default function TelaNota() {
         )}
 
         {notas.length > 0 && (
-          <Secao titulo={`Histórico (${notas.length} compras)`}>
+          <Secao titulo={`Histórico (${notas.length} ${notas.length === 1 ? "compra" : "compras"})`}>
             <Cartao>
               {notas.map((n) => (
                 <Pressable

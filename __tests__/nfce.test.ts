@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { extrairChave, lerPaginaNfce, pareceQrNfce } from '../src/lib/nfce';
+import { extrairChave, lerPaginaNfce, lerTextoNfce, pareceQrNfce } from '../src/lib/nfce';
 
 // Página sintética no layout "padrão" dos portais de consulta da NFC-e.
 // Precisa ser substituída por uma página real de SC para validar o parser.
@@ -50,5 +50,31 @@ describe('NFC-e', () => {
 
   it('devolve null para layout desconhecido', () => {
     expect(lerPaginaNfce('<html><p>outro layout</p></html>')).toBeNull();
+  });
+
+  it('lê o texto copiado da página (formato do portal de SC, dados fictícios)', () => {
+    const texto = [
+      'DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRÔNICA',
+      '',
+      'MERCADO EXEMPLO LJ 1 - BLUMENAU',
+      'CNPJ: 00.000.000/0001-00',
+      'RUA EXEMPLO , 100 , , CENTRO , BLUMENAU , SC',
+      'LIMAO TAITI kg (Código: 8386 )',
+      'Qtde.:0,615UN: KG1Vl. Unit.:   14,99\tVl. Total',
+      '9,22',
+      'CAFE TORRADO 500G (Código: 7891234567895 )',
+      'Qtde.:2UN: UN1Vl. Unit.:   21,9\tVl. Total',
+      '43,80',
+      'Qtd. total de itens:', '2', 'Valor total R$:', '53,02', 'Descontos R$:', '1,00', 'Valor a pagar R$:', '52,02',
+      'Emissão: 07/11/2026 08:58:31 - Via Consumidor 2',
+    ].join('\n');
+    const n = lerTextoNfce(texto)!;
+    expect(n.mercado).toBe('MERCADO EXEMPLO LJ 1 - BLUMENAU');
+    expect(n.data).toBe('2026-11-07T08:58:31');
+    expect(n.total).toBe(52.02);
+    expect(n.itens).toEqual([
+      { descricao: 'LIMAO TAITI kg', quantidade: 0.615, unidade: 'KG', valorUnitario: 14.99, valorTotal: 9.22 },
+      { descricao: 'CAFE TORRADO 500G', quantidade: 2, unidade: 'UN', valorUnitario: 21.9, valorTotal: 43.8, codigo: '7891234567895' },
+    ]);
   });
 });

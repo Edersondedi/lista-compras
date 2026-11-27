@@ -61,7 +61,7 @@ export function lerPaginaNfce(html: string): NotaLida | null {
     const valor = spanDeClasse(tr, 'valor');
     if (!nome || !valor) continue;
     const qtd = numeroBr(spanDeClasse(tr, 'Rqtd') ?? '1') || 1;
-    const un = (spanDeClasse(tr, 'RUN') ?? '').replace(/^UN:?\s*/i, '').trim() || 'UN';
+    const un = (spanDeClasse(tr, 'RUN') ?? '').replace(/^UN:?\s*/i, '').replace(/\d+$/, '').trim() || 'UN';
     const unit = spanDeClasse(tr, 'RvlUnit');
     const codigo = (spanDeClasse(tr, 'RCod') ?? '').match(/\d{8,14}/)?.[0];
     const valorTotal = numeroBr(valor);
@@ -88,6 +88,39 @@ export function lerPaginaNfce(html: string): NotaLida | null {
     ? numeroBr(totalM[1])
     : Math.round(itens.reduce((s, i) => s + i.valorTotal, 0) * 100) / 100;
 
+  return { mercado, data, itens, total };
+}
+
+/**
+ * Lê o TEXTO da página da nota (selecionar tudo e copiar no Safari), para quando o app
+ * não consegue baixar a página sozinho (versão web). Formato do portal de SC:
+ *   LIMAO TAITI kg (Código: 8386 )
+ *   Qtde.:0,615UN: KG1Vl. Unit.:   14,99	Vl. Total
+ *   9,22
+ */
+export function lerTextoNfce(texto: string): NotaLida | null {
+  const t = texto.replace(/\r/g, '').replace(/\u00a0/g, ' ');
+  const re = /^[ \t]*([^\n]+?)\s*\(C[óo]digo:\s*(\d+)\s*\)\s*Qtde\.:\s*([\d.,]+)\s*UN:\s*([A-Za-z]+?)\d*\s*Vl\. Unit\.:\s*([\d.,]+)\s*Vl\. Total\s*([\d.,]+)/gm;
+  const itens: ItemNota[] = [];
+  for (const m of t.matchAll(re)) {
+    const codigo = m[2].length >= 8 ? m[2] : undefined;
+    itens.push({
+      descricao: m[1].trim(),
+      quantidade: numeroBr(m[3]) || 1,
+      unidade: m[4].toUpperCase(),
+      valorUnitario: numeroBr(m[5]),
+      valorTotal: numeroBr(m[6]),
+      ...(codigo ? { codigo } : {}),
+    });
+  }
+  if (itens.length === 0) return null;
+
+  const lojaM = t.match(/ELETR[ÔO]NICA\s*\n+\s*([^\n]+)/i);
+  const mercado = lojaM ? lojaM[1].trim() : 'Mercado (nome não lido)';
+  const dataM = t.match(/Emiss[ãa]o:?\s*(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2}(?::\d{2})?)?/i);
+  const data = dataM ? `${dataM[3]}-${dataM[2]}-${dataM[1]}T${(dataM[4] ?? '12:00').padEnd(8, ':00').slice(0, 8)}` : undefined;
+  const totalM = t.match(/Valor a pagar R\$:?\s*([\d.,]+)/i) ?? t.match(/Valor total R\$:?\s*([\d.,]+)/i);
+  const total = totalM ? numeroBr(totalM[1]) : Math.round(itens.reduce((a, i) => a + i.valorTotal, 0) * 100) / 100;
   return { mercado, data, itens, total };
 }
 
