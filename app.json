@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "compras",
-    "slug": "compras",
+    "name": "Lista de Compras",
+    "slug": "lista-compras",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,6 +20,16 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Usamos a câmera para ler o QR Code da nota fiscal e códigos de barras."
+        }
+      ]
+    ],
+    "scheme": "listacompras"
   }
 }
