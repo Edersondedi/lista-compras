@@ -1,20 +1,42 @@
-import { useMemo } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { confirmar } from './confirmar';
-import { historicoPrecos, porCorredor, variacaoSobreMedia } from './lib/gastos';
-import { arred, mercadosConhecidos, numeroOuNulo, precoNoMercado, reais } from './lib/logic';
-import { NOMES_MERCADOS } from './lib/mercados';
-import { useLoja } from './store';
-import { Aviso, Botao, Cartao, Chip, Secao, cores, s } from './ui';
+import { confirmar } from '../confirmar';
+import { precosDaEtiqueta } from '../lib/cupom';
+import { historicoPrecos, porCorredor, variacaoSobreMedia } from '../lib/gastos';
+import { escolherFoto, lerFoto, ocrDisponivel } from '../ocr';
+import { arred, mercadosConhecidos, numeroOuNulo, precoNoMercado, reais } from '../lib/logic';
+import { NOMES_MERCADOS } from '../lib/mercados';
+import { useLoja } from '../store';
+import { Aviso, Botao, Cartao, Chip, Secao, cores, s } from '../ui';
 
 /** Tela de compra: lista na ordem dos corredores, preço pago de cada item e total do carrinho. */
-export function NoMercado() {
+export default function TelaMercado() {
   const { lista, notas, ofertas, clubes, carrinho, definirCarrinho, alternarComprado, salvarNota, limparComprados } = useLoja();
   const mercado = carrinho?.mercado ?? '';
   const precos = carrinho?.precos ?? {};
   const mercados = [...new Set([...NOMES_MERCADOS, ...mercadosConhecidos(notas, ofertas)])].filter((m) => !m.startsWith('Mercado ('));
   const grupos = porCorredor(lista);
+  const [foto, setFoto] = useState<{ id: string; lendo: boolean; precos: number[]; erro?: string } | null>(null);
+
+  async function precoPorFoto(id: string) {
+    const arquivo = await escolherFoto();
+    if (!arquivo) return;
+    setFoto({ id, lendo: true, precos: [] });
+    try {
+      const r = await lerFoto(arquivo, undefined, [1000, 600, 380], 'etiqueta');
+      const precos = precosDaEtiqueta(r.palavras);
+      if (precos.length === 1) {
+        setPreco(id, precos[0].toFixed(2).replace('.', ','));
+        setFoto(null);
+      } else {
+        setFoto({ id, lendo: false, precos, erro: precos.length ? undefined : 'Não achei preço na foto. Chegue mais perto da etiqueta e tente de novo, ou digite.' });
+      }
+    } catch (e) {
+      setFoto({ id, lendo: false, precos: [], erro: (e as Error).message });
+    }
+  }
 
   const estimativas = useMemo(() => {
     const e: Record<string, number> = {};
@@ -34,7 +56,13 @@ export function NoMercado() {
   const estimadoFalta = arred(faltam.reduce((t, i) => t + (estimativas[i.id] ?? 0), 0));
   const faltamSemEstimativa = faltam.filter((i) => estimativas[i.id] === undefined).length;
 
-  const setPreco = (id: string, v: string) => definirCarrinho({ mercado, precos: { ...precos, [id]: v }, aberto: true });
+  function setPreco(id: string, v: string) {
+    const atual = useLoja.getState().carrinho;
+    definirCarrinho({ mercado: atual?.mercado ?? '', precos: { ...(atual?.precos ?? {}), [id]: v }, aberto: true });
+    // digitou o preço = pegou o item
+    const item = useLoja.getState().lista.find((x) => x.id === id);
+    if (item && !item.comprado && v.trim()) alternarComprado(id);
+  }
 
   function finalizar(salvar: boolean) {
     if (salvar) {
@@ -51,12 +79,7 @@ export function NoMercado() {
   return (
     <SafeAreaView style={s.tela} edges={['top']}>
       <ScrollView contentContainerStyle={[s.conteudo, { paddingBottom: 200 }]} keyboardShouldPersistTaps="handled">
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={s.titulo}>No mercado</Text>
-          <Pressable accessibilityRole="button" onPress={() => definirCarrinho({ mercado, precos, aberto: false })} style={{ minHeight: 44, justifyContent: 'center', paddingLeft: 12 }}>
-            <Text style={{ color: cores.verde, fontWeight: '600' }}>Voltar à lista</Text>
-          </Pressable>
-        </View>
+        <Text style={s.titulo}>No mercado</Text>
         <Text style={s.subtitulo}>Em qual mercado você está?</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 8 }}>
           {mercados.map((m) => (
@@ -74,7 +97,8 @@ export function NoMercado() {
                 const pago = numeroOuNulo(precos[i.id] ?? '');
                 const varia = pago !== null ? variacaoSobreMedia(pago, historicoPrecos(i.nome, notas, ofertas)) : null;
                 return (
-                  <View key={i.id} style={[s.linha, { paddingVertical: 4, gap: 10 }]}>
+                  <View key={i.id}>
+                  <View style={[s.linha, { paddingVertical: 4, gap: 10 }]}>
                     <Pressable
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: i.comprado }}
@@ -106,6 +130,16 @@ export function NoMercado() {
                         </Text>
                       </View>
                     </Pressable>
+                    {ocrDisponivel && (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Ler preço de ${i.nome} pela foto da etiqueta`}
+                        onPress={() => precoPorFoto(i.id)}
+                        style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        {foto?.id === i.id && foto.lendo ? <ActivityIndicator color={cores.verde} /> : <Ionicons name="camera-outline" size={22} color={cores.verde} />}
+                      </Pressable>
+                    )}
                     <TextInput
                       accessibilityLabel={`Preço pago em ${i.nome}`}
                       value={precos[i.id] ?? ''}
@@ -115,6 +149,33 @@ export function NoMercado() {
                       keyboardType="decimal-pad"
                       style={[s.campo, { width: 88, textAlign: 'right' }]}
                     />
+                  </View>
+                  {foto?.id === i.id && !foto.lendo && (
+                    <View style={{ paddingHorizontal: 14, paddingBottom: 10, gap: 6 }}>
+                      {foto.erro ? (
+                        <Text style={{ fontSize: 13, color: cores.alertaTexto }}>{foto.erro}</Text>
+                      ) : (
+                        <>
+                          <Text style={s.detalhe}>Achei mais de um preço na etiqueta. Qual é o de {i.nome}?</Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                            {foto.precos.map((p) => (
+                              <Chip
+                                key={p}
+                                texto={reais(p)}
+                                onPress={() => {
+                                  setPreco(i.id, p.toFixed(2).replace('.', ','));
+                                  setFoto(null);
+                                }}
+                              />
+                            ))}
+                          </View>
+                        </>
+                      )}
+                      <Pressable onPress={() => setFoto(null)} accessibilityRole="button">
+                        <Text style={{ fontSize: 13, color: cores.verde, fontWeight: '600' }}>Fechar</Text>
+                      </Pressable>
+                    </View>
+                  )}
                   </View>
                 );
               })}

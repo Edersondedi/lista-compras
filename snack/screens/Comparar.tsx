@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { compararMercados, idadeDias, melhorDivisao, menorPorItem, PrecoEncontrado, qtdItens, reais, textoIdade } from '../lib/logic';
+import { NOMES_MERCADOS } from '../lib/mercados';
 import { useLoja } from '../store';
 import { PesquisaGuiada } from '../PesquisaGuiada';
 import { Aviso, Botao, Cartao, Chip, Secao, cores, s } from '../ui';
@@ -18,7 +19,7 @@ function velho(p: PrecoEncontrado) {
 }
 
 export default function TelaComparar() {
-  const { lista, notas, ofertas, clubes } = useLoja();
+  const { lista, notas, ofertas, clubes, alternarClube } = useLoja();
   const pendentes = lista.filter((i) => !i.comprado);
   const [soRecentes, setSoRecentes] = useState(true);
   const [pesquisando, setPesquisando] = useState(false);
@@ -59,7 +60,7 @@ export default function TelaComparar() {
 
         {pendentes.length === 0 && <Aviso tipo="info">Adicione itens na lista para comparar.</Aviso>}
         {pendentes.length > 0 && resultados.length === 0 && (
-          <Aviso>Ainda não há preços. Escaneie notas fiscais na aba Nota fiscal ou cadastre ofertas na aba Promoções.</Aviso>
+          <Aviso>Ainda não há preços. Registre cupons na aba Nota fiscal ou anote preços pelo botão "Preço" dos itens da lista.</Aviso>
         )}
 
         {!pesquisando && melhor && pendentes.length > 0 && !completo && (
@@ -172,6 +173,17 @@ export default function TelaComparar() {
           <Text style={[s.detalhe, { marginTop: 16, lineHeight: 17 }]}>
             Total estimado com 1 unidade de cada item, pelo último preço registrado. Preços de clube só entram nos mercados marcados como cadastrados.
           </Text>
+        )}
+
+        {!pesquisando && (
+          <Secao titulo="Onde vocês são cadastrados (clube ou cooperado)">
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {[...new Set([...NOMES_MERCADOS, ...clubes])].map((m) => (
+                <Chip key={m} texto={clubes.includes(m) ? `${m} · cadastrado` : `+ ${m}`} ativo={clubes.includes(m)} onPress={() => alternarClube(m)} />
+              ))}
+            </View>
+            <Text style={s.detalhe}>Preços "só para clube" anotados contam apenas nos mercados marcados aqui.</Text>
+          </Secao>
         )}
       </ScrollView>
     </SafeAreaView>

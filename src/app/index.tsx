@@ -5,7 +5,6 @@ import { router } from 'expo-router';
 import { confirmar } from '../confirmar';
 import { Compartilhar } from '../Compartilhar';
 import { ListaDaCasa } from '../ListaDaCasa';
-import { NoMercado } from '../NoMercado';
 import { itensFrequentes } from '../lib/gastos';
 import { PrecoRapido } from '../PrecoRapido';
 import { sugerirAcabando } from '../lib/logic';
@@ -14,7 +13,7 @@ import { useLoja } from '../store';
 import { Aviso, Botao, Campo, Cartao, Chip, Secao, cores, s } from '../ui';
 
 export default function TelaLista() {
-  const { lista, notas, frequencia, carrinho, definirCarrinho, adicionarItem, alternarComprado, removerItem, limparComprados } = useLoja();
+  const { lista, notas, frequencia, adicionarItem, alternarComprado, removerItem, limparComprados } = useLoja();
   const [nome, setNome] = useState('');
   const [qtd, setQtd] = useState('');
   const [categoria, setCategoria] = useState<Categoria>('Mercearia');
@@ -38,8 +37,6 @@ export default function TelaLista() {
   function confirmarRemocao(id: string, item: string) {
     confirmar('Remover item', `Tirar "${item}" da lista?`, 'Remover', () => removerItem(id));
   }
-
-  if (carrinho?.aberto) return <NoMercado />;
 
   return (
     <SafeAreaView style={s.tela} edges={['top']}>
@@ -75,14 +72,6 @@ export default function TelaLista() {
           )}
         </Cartao>
 
-        {pendentes + comprados > 0 && (
-          <View style={{ marginTop: 12 }}>
-            <Botao
-              titulo={carrinho ? `Continuar compra${carrinho.mercado ? ` no ${carrinho.mercado}` : ''}` : 'Estou no mercado'}
-              onPress={() => definirCarrinho({ mercado: carrinho?.mercado ?? '', precos: carrinho?.precos ?? {}, aberto: true })}
-            />
-          </View>
-        )}
 
         <ListaDaCasa />
         <Compartilhar />

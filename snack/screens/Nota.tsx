@@ -4,16 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Clipboard from 'expo-clipboard';
 import { confirmar } from '../confirmar';
-import { casa, mercadosConhecidos, numeroOuNulo, qtdItens, reais } from '../lib/logic';
+import { casa, dataBr, lerDataBr, mercadosConhecidos, numeroOuNulo, qtdItens, reais } from '../lib/logic';
+import { CupomLido, lerCupom } from '../lib/cupom';
+import { ordenarNotas } from '../lib/codigoLista';
+import { RevisarCupom } from '../RevisarCupom';
+import { escolherFoto, lerFoto, ocrDisponivel } from '../ocr';
 import { buscarNfce, lerTextoNfce, NotaLida, pareceQrNfce, SEM_NOME } from '../lib/nfce';
 import { ItemNota } from '../lib/types';
 import { useLoja } from '../store';
 import { Aviso, Botao, Campo, Cartao, Chip, Secao, cores, s } from '../ui';
 
-type Modo = 'inicio' | 'camera' | 'lendo' | 'manual';
+type Modo = 'inicio' | 'camera' | 'lendo' | 'manual' | 'foto' | 'revisar';
 
 export default function TelaNota() {
-  const { notas, lista, ofertas, clubes, salvarNota, removerNota, renomearMercado, alternarComprado } = useLoja();
+  const { notas, lista, ofertas, clubes, salvarNota, removerNota, editarNota, alternarComprado } = useLoja();
   const [permissao, pedirPermissao] = useCameraPermissions();
   const [modo, setModo] = useState<Modo>('inicio');
   const [msg, setMsg] = useState<string | null>(null);
@@ -21,6 +25,10 @@ export default function TelaNota() {
   const [link, setLink] = useState('');
   const [editando, setEditando] = useState<string | null>(null);
   const [nomeEdit, setNomeEdit] = useState('');
+  const [dataEdit, setDataEdit] = useState('');
+  const [progresso, setProgresso] = useState(0);
+  const [cupom, setCupom] = useState<CupomLido | null>(null);
+  const [dataManual, setDataManual] = useState(dataBr(new Date().toISOString()));
   const sugestoesMercado = [...new Set([...mercadosConhecidos(notas, ofertas), ...clubes, 'Cooper', 'Koch', 'Unidos', 'Fort'])].filter(
     (m) => m !== SEM_NOME,
   );
@@ -28,6 +36,32 @@ export default function TelaNota() {
   function abrirEdicao(id: string, atual: string) {
     setEditando(id);
     setNomeEdit(atual === SEM_NOME ? '' : atual);
+    const n = notas.find((x) => x.id === id);
+    setDataEdit(n ? dataBr(n.data) : '');
+  }
+
+  async function lerPorFoto() {
+    setMsg(null);
+    const foto = await escolherFoto();
+    if (!foto) return;
+    setModo('foto');
+    setProgresso(0);
+    try {
+      const r = await lerFoto(foto, setProgresso);
+      setCupom(lerCupom(r.texto));
+      setModo('revisar');
+    } catch (e) {
+      setModo('inicio');
+      setMsg((e as Error).message || 'Não consegui ler a foto. Tente de novo.');
+    }
+  }
+
+  function salvarRevisado(n: { mercado: string; data: string; itens: ItemNota[]; total: number }) {
+    salvarNota({ ...n, origem: 'foto' });
+    const marcados = marcarItensDaLista(n.itens);
+    setCupom(null);
+    setModo('inicio');
+    setMsg(`Compra de ${n.mercado} (${dataBr(n.data)}) salva: ${qtdItens(n.itens.length)}, ${reais(n.total)}. ${marcados ? `${qtdItens(marcados)} da lista marcado(s) como comprado.` : ''}`);
   }
 
   // entrada manual
@@ -142,7 +176,7 @@ export default function TelaNota() {
   function salvarManual() {
     if (!mercado.trim() || itens.length === 0) return;
     const total = Math.round(itens.reduce((a, i) => a + i.valorTotal, 0) * 100) / 100;
-    salvarNota({ mercado: mercado.trim(), data: new Date().toISOString(), itens, total, origem: 'manual' });
+    salvarNota({ mercado: mercado.trim(), data: lerDataBr(dataManual) ?? new Date().toISOString(), itens, total, origem: 'manual' });
     const marcados = marcarItensDaLista(itens);
     setMsg(`Compra em ${mercado.trim()} salva: ${qtdItens(itens.length)}, ${reais(total)}. ${qtdItens(marcados)} da lista marcado(s).`);
     setItens([]);
@@ -173,14 +207,31 @@ export default function TelaNota() {
         <Text style={s.titulo}>Nota fiscal</Text>
         <Text style={s.subtitulo}>Os preços pagos alimentam a comparação e as sugestões</Text>
 
-        {modo === 'lendo' ? (
+        {modo === 'revisar' && cupom ? (
+          <RevisarCupom cupom={cupom} aoSalvar={salvarRevisado} aoCancelar={() => { setCupom(null); setModo('inicio'); }} />
+        ) : modo === 'foto' ? (
+          <View style={{ padding: 30, alignItems: 'center', gap: 10 }}>
+            <ActivityIndicator color={cores.verde} />
+            <Text style={s.detalhe}>
+              {progresso > 0 ? `Lendo o cupom… ${Math.round(progresso * 100)}%` : 'Preparando o leitor de fotos (na primeira vez demora um pouco)…'}
+            </Text>
+          </View>
+        ) : modo === 'lendo' ? (
           <View style={{ padding: 30, alignItems: 'center', gap: 10 }}>
             <ActivityIndicator color={cores.verde} />
             <Text style={s.detalhe}>Lendo a nota no portal da Sefaz…</Text>
           </View>
         ) : (
           <View style={{ gap: 10, marginTop: 16 }}>
-            <Botao titulo="Colar nota copiada do Safari" onPress={colarNota} />
+            {ocrDisponivel && (
+              <>
+                <Botao titulo="Ler cupom pela foto" onPress={lerPorFoto} />
+                <Text style={[s.detalhe, { lineHeight: 17 }]}>
+                  Tire a foto com o cupom esticado, bem iluminado e enchendo a tela. Cupom comprido: fotografe em partes e salve cada uma. Você confere tudo antes de salvar.
+                </Text>
+              </>
+            )}
+            <Botao tipo={ocrDisponivel ? 'secundario' : 'primario'} titulo="Colar nota copiada do Safari" onPress={colarNota} />
             <Text style={[s.detalhe, { lineHeight: 17 }]}>
               Como copiar: aponte a câmera do iPhone para o QR Code do cupom e abra o link. Na página da nota, toque e segure no texto, escolha Selecionar Tudo e depois Copiar.
             </Text>
@@ -206,6 +257,7 @@ export default function TelaNota() {
           <Secao titulo="Compra digitada">
             <Cartao style={{ padding: 14, gap: 10 }}>
               <Campo rotulo="Mercado" value={mercado} onChangeText={setMercado} placeholder="Nome do mercado" />
+              <Campo rotulo="Data da compra (dd/mm/aaaa)" value={dataManual} onChangeText={setDataManual} placeholder="27/11/2026" keyboardType="numbers-and-punctuation" />
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <Campo rotulo="Produto" value={desc} onChangeText={setDesc} placeholder="Arroz tipo 1 5 kg" />
                 <View style={{ width: 100 }}>
@@ -219,7 +271,7 @@ export default function TelaNota() {
                   <Text style={{ fontWeight: '600' }}>{reais(i.valorTotal)}</Text>
                 </View>
               ))}
-              <Botao titulo="Salvar compra" onPress={salvarManual} desabilitado={!mercado.trim() || itens.length === 0} />
+              <Botao titulo="Salvar compra" onPress={salvarManual} desabilitado={!mercado.trim() || itens.length === 0 || !lerDataBr(dataManual)} />
             </Cartao>
           </Secao>
         )}
@@ -227,7 +279,7 @@ export default function TelaNota() {
         {notas.length > 0 && (
           <Secao titulo={`Histórico (${notas.length} ${notas.length === 1 ? "compra" : "compras"})`}>
             <Cartao>
-              {notas.map((n) => editando === n.id ? (
+              {ordenarNotas(notas).map((n) => editando === n.id ? (
                 <View key={n.id} style={[s.linha, { flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
                   <Campo rotulo={`Mercado desta compra (${qtdItens(n.itens.length)}, ${reais(n.total)})`} value={nomeEdit} onChangeText={setNomeEdit} placeholder="Ex.: Koch" />
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -235,10 +287,12 @@ export default function TelaNota() {
                       <Chip key={m} texto={m} ativo={m === nomeEdit} onPress={() => setNomeEdit(m)} />
                     ))}
                   </View>
+                  <Campo rotulo="Data da compra (dd/mm/aaaa)" value={dataEdit} onChangeText={setDataEdit} placeholder="27/11/2026" keyboardType="numbers-and-punctuation" />
+                  {!lerDataBr(dataEdit) && <Text style={{ fontSize: 12, color: cores.perigo }}>Data inválida. Use o formato 27/11/2026.</Text>}
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <View style={{ flex: 1 }}><Botao tipo="secundario" titulo="Cancelar" onPress={() => setEditando(null)} /></View>
                     <View style={{ flex: 1 }}>
-                      <Botao titulo="Salvar nome" desabilitado={!nomeEdit.trim()} onPress={() => { renomearMercado(n.id, nomeEdit); setEditando(null); setMsg(null); }} />
+                      <Botao titulo="Salvar" desabilitado={!nomeEdit.trim() || !lerDataBr(dataEdit)} onPress={() => { editarNota(n.id, { mercado: nomeEdit, data: lerDataBr(dataEdit) ?? undefined }); setEditando(null); setMsg(null); }} />
                     </View>
                   </View>
                 </View>
@@ -246,7 +300,7 @@ export default function TelaNota() {
                 <Pressable
                   key={n.id}
                   accessibilityRole="button"
-                  accessibilityHint="Toque para renomear o mercado; segure para excluir"
+                  accessibilityHint="Toque para corrigir mercado e data; segure para excluir"
                   onPress={() => abrirEdicao(n.id, n.mercado)}
                   onLongPress={() =>
                     confirmar('Excluir compra', `Apagar a compra de ${n.mercado}? Os preços dela saem da comparação.`, 'Excluir', () => removerNota(n.id))
@@ -256,14 +310,14 @@ export default function TelaNota() {
                   <View style={{ flex: 1 }}>
                     <Text style={[s.textoItem, n.mercado === SEM_NOME && { color: cores.alertaTexto }]}>{n.mercado}</Text>
                     <Text style={s.detalhe}>
-                      {n.data.slice(8, 10)}/{n.data.slice(5, 7)} · {qtdItens(n.itens.length)} · {n.origem === 'qrcode' ? 'QR Code' : 'digitada'}
+                      {dataBr(n.data)} · {qtdItens(n.itens.length)} · {n.origem === 'qrcode' ? 'QR Code' : n.origem === 'foto' ? 'foto' : 'digitada'}
                     </Text>
                   </View>
                   <Text style={{ fontWeight: '700' }}>{reais(n.total)}</Text>
                 </Pressable>
               ))}
             </Cartao>
-            <Text style={[s.detalhe, { textAlign: 'center' }]}>Toque numa compra para renomear o mercado · segure para excluir</Text>
+            <Text style={[s.detalhe, { textAlign: 'center' }]}>Toque numa compra para corrigir o mercado e a data · segure para excluir</Text>
           </Secao>
         )}
       </ScrollView>

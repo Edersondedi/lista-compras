@@ -30,6 +30,7 @@ interface Estado {
   salvarNota: (nota: Omit<NotaFiscal, 'id'>) => NotaFiscal;
   removerNota: (id: string) => void;
   renomearMercado: (id: string, mercado: string) => void;
+  editarNota: (id: string, mudancas: { mercado?: string; data?: string }) => void;
 
   salvarOferta: (oferta: Omit<Oferta, 'id'>) => void;
   removerOferta: (id: string) => void;
@@ -96,6 +97,15 @@ export const useLoja = create<Estado>()((set, get) => ({
       removerNota: (id) => set((s) => ({ notas: s.notas.filter((n) => n.id !== id) })),
       renomearMercado: (id, mercado) =>
         set((s) => ({ notas: s.notas.map((n) => (n.id === id && mercado.trim() ? { ...n, mercado: mercado.trim() } : n)) })),
+
+      editarNota: (id, mudancas) =>
+        set((s) => ({
+          notas: s.notas.map((n) =>
+            n.id === id
+              ? { ...n, ...(mudancas.mercado?.trim() ? { mercado: mudancas.mercado.trim() } : {}), ...(mudancas.data ? { data: mudancas.data } : {}) }
+              : n,
+          ),
+        })),
 
       salvarOferta: (oferta) => set((s) => ({ ofertas: [{ ...oferta, id: novoId(), criadoEm: new Date().toISOString() }, ...s.ofertas] })),
       removerOferta: (id) => set((s) => ({ ofertas: s.ofertas.filter((o) => o.id !== id) })),

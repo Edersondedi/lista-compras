@@ -141,7 +141,7 @@ export default function TelaGastos() {
         {r.compras === 0 ? (
           <Aviso tipo="info">
             Nenhuma nota fiscal em {nomeMes(mes)}. Os gastos aparecem aqui quando vocês leem as notas na aba Nota fiscal, ou ao
-            finalizar uma compra no modo "No mercado".
+            finalizar uma compra na aba Mercado.
           </Aviso>
         ) : (
           <>

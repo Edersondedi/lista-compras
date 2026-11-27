@@ -13,14 +13,16 @@ export default function Layout() {
         headerShown: false,
         tabBarActiveTintColor: cores.verde,
         tabBarInactiveTintColor: cores.secundario,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Lista', tabBarIcon: icone('list') }} />
+      <Tabs.Screen name="mercado" options={{ title: 'Mercado', tabBarIcon: icone('cart') }} />
       <Tabs.Screen name="comparar" options={{ title: 'Comparar', tabBarIcon: icone('swap-horizontal') }} />
       <Tabs.Screen name="promocoes" options={{ title: 'Promoções', tabBarIcon: icone('pricetag') }} />
       <Tabs.Screen name="gastos" options={{ title: 'Gastos', tabBarIcon: icone('bar-chart') }} />
       <Tabs.Screen name="nota" options={{ title: 'Nota fiscal', tabBarIcon: icone('receipt') }} />
+      <Tabs.Screen name="ajuda" options={{ title: 'Ajuda', tabBarIcon: icone('help-circle') }} />
     </Tabs>
   );
 }

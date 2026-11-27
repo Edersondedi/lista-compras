@@ -43,7 +43,7 @@ export interface NotaFiscal {
   data: string; // ISO
   itens: ItemNota[];
   total: number;
-  origem: 'qrcode' | 'manual';
+  origem: 'qrcode' | 'manual' | 'foto';
   url?: string;
 }
 

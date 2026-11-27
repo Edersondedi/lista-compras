@@ -112,3 +112,16 @@ describe('formatos', () => {
     expect(numeroOuNulo('')).toBeNull();
   });
 });
+
+import { dataBr, lerDataBr } from '../src/lib/logic';
+describe('datas', () => {
+  it('lê e mostra data brasileira', () => {
+    const hoje = new Date(2026, 10, 27, 15);
+    expect(dataBr(lerDataBr('05/11/2026', hoje)!)).toBe('05/11/2026');
+    expect(dataBr(lerDataBr('5/11/26', hoje)!)).toBe('05/11/2026');
+    expect(dataBr(lerDataBr('20/11', hoje)!)).toBe('20/11/2026');
+    expect(lerDataBr('31/02/2026', hoje)).toBeNull();
+    expect(lerDataBr('10/12/2026', hoje)).toBeNull();
+    expect(lerDataBr('ontem', hoje)).toBeNull();
+  });
+});

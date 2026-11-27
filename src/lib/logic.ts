@@ -256,3 +256,23 @@ export function numeroOuNulo(texto: string): number | null {
 export function novoId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
+
+/** "2026-11-27T..." -> "27/11/2026" (data local). */
+export function dataBr(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+/** "27/11/2026" ou "27/11/26" -> ISO (meio-dia local, para não virar o dia anterior em outro fuso). null se inválida. */
+export function lerDataBr(texto: string, hoje: Date = new Date()): string | null {
+  const m = texto.trim().match(/^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/);
+  if (!m) return null;
+  const d = Number(m[1]);
+  const mes = Number(m[2]);
+  const a = m[3] ? (m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3])) : hoje.getFullYear();
+  const data = new Date(a, mes - 1, d, 12, 0);
+  if (data.getDate() !== d || data.getMonth() !== mes - 1) return null;
+  if (data.getTime() > hoje.getTime() + 86_400_000) return null; // compra no futuro
+  return data.toISOString();
+}

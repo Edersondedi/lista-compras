@@ -27,6 +27,12 @@ export function nomeDoMercado(razaoSocial: string): string {
   return razaoSocial.trim();
 }
 
+/** Procura uma rede conhecida em qualquer parte do texto (ex.: cupom lido por foto). */
+export function redeNoTexto(texto: string): string | null {
+  for (const [re, nome] of REDES) if (re.test(texto)) return nome;
+  return null;
+}
+
 export const SEM_NOME = 'Mercado (nome não lido)';
 
 export interface NotaLida {

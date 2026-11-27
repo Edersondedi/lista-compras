@@ -40,3 +40,9 @@ Estrutura: telas em `src/app/` (Expo Router, uma aba por arquivo), lógica pura 
 ## Compartilhar a lista
 
 Na aba Lista, "Enviar lista" manda os itens pendentes pelo WhatsApp com um link. Quem recebe toca no link (ou cola a mensagem em "Receber lista") e os itens novos entram na lista dela; itens repetidos são ignorados. Não há sincronização automática.
+
+## Abas
+
+Lista · Mercado (compra em andamento, preço por foto da etiqueta) · Comparar (inclui clubes) · Promoções (encartes da semana) · Gastos · Nota fiscal (cupom por foto, QR Code, digitação; data editável) · Ajuda.
+
+A leitura por foto usa Tesseract.js no navegador (sem servidor). O texto lido passa por `src/lib/cupom.ts` e sempre vai para uma tela de conferência antes de salvar.
