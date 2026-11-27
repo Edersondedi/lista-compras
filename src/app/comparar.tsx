@@ -3,7 +3,8 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { compararMercados, idadeDias, melhorDivisao, menorPorItem, PrecoEncontrado, qtdItens, reais, textoIdade } from '../lib/logic';
 import { useLoja } from '../store';
-import { Aviso, Cartao, Chip, Secao, cores, s } from '../ui';
+import { PesquisaGuiada } from '../PesquisaGuiada';
+import { Aviso, Botao, Cartao, Chip, Secao, cores, s } from '../ui';
 
 const LIMITE_DIAS = 15;
 
@@ -20,6 +21,7 @@ export default function TelaComparar() {
   const { lista, notas, ofertas, clubes } = useLoja();
   const pendentes = lista.filter((i) => !i.comprado);
   const [soRecentes, setSoRecentes] = useState(true);
+  const [pesquisando, setPesquisando] = useState(false);
   const resultados = useMemo(
     () => compararMercados(lista, notas, ofertas, clubes, new Date(), soRecentes ? LIMITE_DIAS : undefined),
     [lista, notas, ofertas, clubes, soRecentes],
@@ -27,7 +29,10 @@ export default function TelaComparar() {
   const divisao = useMemo(() => melhorDivisao(resultados, lista), [resultados, lista]);
   const porItem = useMemo(() => menorPorItem(resultados, lista), [resultados, lista]);
   const melhor = resultados[0];
-  const pior = resultados.filter((r) => r.encontrados === melhor?.encontrados).at(-1);
+  const chaves = (r: { precos: Record<string, unknown> }) => Object.keys(r.precos).sort().join('|');
+  // só compara com mercados que têm preço exatamente dos mesmos itens
+  const pior = melhor ? resultados.filter((r) => chaves(r) === chaves(melhor)).at(-1) : undefined;
+  const completo = !!melhor && melhor.encontrados === pendentes.length;
 
   return (
     <SafeAreaView style={s.tela} edges={['top']}>
@@ -45,12 +50,25 @@ export default function TelaComparar() {
           Os preços vêm só do que entra no app: suas notas fiscais, preços anotados (Menor Preço ou sites) e ofertas cadastradas. O app não busca preços sozinho.
         </Text>
 
+        {pendentes.length > 0 && !pesquisando && (
+          <View style={{ marginTop: 12 }}>
+            <Botao titulo={`Pesquisar preços da lista (${qtdItens(pendentes.length)})`} onPress={() => setPesquisando(true)} />
+          </View>
+        )}
+        {pesquisando && <PesquisaGuiada itens={pendentes} aoFechar={() => setPesquisando(false)} />}
+
         {pendentes.length === 0 && <Aviso tipo="info">Adicione itens na lista para comparar.</Aviso>}
         {pendentes.length > 0 && resultados.length === 0 && (
           <Aviso>Ainda não há preços. Escaneie notas fiscais na aba Nota fiscal ou cadastre ofertas na aba Promoções.</Aviso>
         )}
 
-        {melhor && pendentes.length > 0 && (
+        {!pesquisando && melhor && pendentes.length > 0 && !completo && (
+          <Aviso tipo="info">
+            Nenhum mercado tem preço de todos os itens ainda. Veja abaixo o mais barato de cada item, ou use Pesquisar preços da lista.
+          </Aviso>
+        )}
+
+        {!pesquisando && melhor && completo && (
           <View style={{ marginTop: 16, padding: 18, borderRadius: 16, backgroundColor: cores.verde, gap: 4 }}>
             <Text style={{ color: '#FFFFFF', opacity: 0.85, fontSize: 12, fontWeight: '600', letterSpacing: 0.7 }}>
               MELHOR MERCADO ÚNICO
@@ -66,7 +84,7 @@ export default function TelaComparar() {
           </View>
         )}
 
-        {resultados.length > 0 && pendentes.length > 0 && (
+        {!pesquisando && resultados.length > 0 && pendentes.length > 0 && (
           <Secao titulo="Menor preço por item">
             <Cartao>
               {porItem.map(({ item, ofertas }) => (
@@ -100,7 +118,7 @@ export default function TelaComparar() {
           </Secao>
         )}
 
-        {resultados.length > 0 && pendentes.length > 0 && (
+        {!pesquisando && resultados.length > 0 && pendentes.length > 0 && (
           <Secao titulo="Ranking">
             <Cartao>
               {resultados.map((r, idx) => (
