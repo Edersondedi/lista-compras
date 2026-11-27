@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Lista de Compras",
+    "name": "Compra Certa",
     "slug": "lista-compras",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -21,8 +21,8 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "output": "single",
-      "name": "Lista de Compras",
-      "shortName": "Compras",
+      "name": "Compra Certa",
+      "shortName": "Compra Certa",
       "themeColor": "#1F7A4D",
       "backgroundColor": "#F6F7F5"
     },

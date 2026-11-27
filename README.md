@@ -1,4 +1,4 @@
-# Lista de Compras
+# Compra Certa
 
 App de lista de compras da casa com comparação de preços entre supermercados e ofertas de clube/cooperado.
 Expo (React Native) + TypeScript, para iPhone e Android.
@@ -36,3 +36,7 @@ npm run typecheck  # checagem de tipos
 ```
 
 Estrutura: telas em `src/app/` (Expo Router, uma aba por arquivo), lógica pura em `src/lib/`, estado persistido em `src/store.ts`.
+
+## Compartilhar a lista
+
+Na aba Lista, "Enviar lista" manda os itens pendentes pelo WhatsApp com um link. Quem recebe toca no link (ou cola a mensagem em "Receber lista") e os itens novos entram na lista dela; itens repetidos são ignorados. Não há sincronização automática.

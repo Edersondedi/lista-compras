@@ -9,7 +9,9 @@ interface Estado {
   ofertas: Oferta[];
   clubes: string[]; // mercados em que o usuário é cadastrado no clube/cooperativa
 
+  pronto: boolean;
   adicionarItem: (nome: string, quantidade: string, categoria: Categoria) => void;
+  receberItens: (itens: { nome: string; quantidade: string; categoria: Categoria }[]) => void;
   alternarComprado: (id: string) => void;
   removerItem: (id: string) => void;
   limparComprados: () => void;
@@ -28,6 +30,17 @@ export const useLoja = create<Estado>()((set, get) => ({
       notas: [],
       ofertas: [],
       clubes: [],
+      pronto: false,
+
+      receberItens: (itens) => {
+        const agora = new Date().toISOString();
+        set((s) => ({
+          lista: [
+            ...s.lista,
+            ...itens.map((i) => ({ id: novoId(), nome: i.nome, quantidade: i.quantidade, categoria: i.categoria, comprado: false, criadoEm: agora })),
+          ],
+        }));
+      },
 
       adicionarItem: (nome, quantidade, categoria) => {
         const limpo = nome.trim();
@@ -82,6 +95,7 @@ AsyncStorage.getItem(CHAVE)
   .catch(() => {})
   .finally(() => {
     carregado = true;
+    useLoja.setState({ pronto: true });
   });
 
 useLoja.subscribe((s) => {
