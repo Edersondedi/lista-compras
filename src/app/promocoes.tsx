@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { casa, mercadosConhecidos, numeroOuNulo, reais } from '../lib/logic';
-import { linkBusca, linkEncarte, MERCADOS } from '../lib/mercados';
+import { linkEncarte, MERCADOS } from '../lib/mercados';
+import { PrecoRapido } from '../PrecoRapido';
 import { useLoja } from '../store';
 import { Aviso, Botao, Campo, Cartao, Chip, Secao, cores, s } from '../ui';
 
@@ -69,7 +70,9 @@ export default function TelaPromocoes() {
                     <View style={{ flex: 1, gap: 2 }}>
                       <Text style={[s.textoItem, { fontWeight: '600' }]}>{item.nome}</Text>
                       {os.length === 0 ? (
-                        <Text style={s.detalhe}>Nenhuma promoção registrada. Toque para procurar nos mercados.</Text>
+                        <Text style={[s.detalhe, { color: cores.alertaTexto }]}>
+                          Nenhuma promoção cadastrada para este item. Toque em Procurar para abrir os sites e anotar o que achar.
+                        </Text>
                       ) : (
                         os.map((o) => (
                           <Text key={o.id} style={[s.detalhe, o === os[0] && { color: cores.verdeEscuro, fontWeight: '600' }]}>
@@ -82,18 +85,12 @@ export default function TelaPromocoes() {
                     </View>
                     <Text style={{ color: cores.verde, fontWeight: '600', fontSize: 13 }}>{itemBusca === item.id ? 'Fechar' : 'Procurar'}</Text>
                   </Pressable>
-                  {itemBusca === item.id && (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 14, paddingBottom: 12 }}>
-                      {MERCADOS.map((m) => (
-                        <Chip key={m.nome} texto={m.nome} onPress={() => Linking.openURL(linkBusca(m, item.nome)).catch(() => {})} />
-                      ))}
-                    </View>
-                  )}
+                  {itemBusca === item.id && <PrecoRapido item={item.nome} aoFechar={() => setItemBusca(null)} />}
                 </View>
               ))}
             </Cartao>
             <Text style={[s.detalhe, { lineHeight: 17 }]}>
-              O app ainda não busca promoções sozinho nos sites dos mercados. Encontrou uma? Cadastre abaixo e ela aparece aqui e na comparação.
+              Atenção: o app não busca promoções sozinho. Aqui aparecem só as promoções e preços que você anotou ou cadastrou, do menor para o maior. Use Procurar para abrir os sites e anotar.
             </Text>
           </Secao>
         )}
@@ -164,7 +161,7 @@ export default function TelaPromocoes() {
                       {o.validade ? ` · até ${o.validade.slice(8, 10)}/${o.validade.slice(5, 7)}` : ''}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
-                      <Etiqueta texto={o.fonte === 'menorpreco' ? 'Menor Preço' : o.tipo === 'clube' ? 'Preço de clube' : 'Para todos'} clube={o.tipo === 'clube'} />
+                      <Etiqueta texto={o.fonte === 'menorpreco' ? 'Menor Preço' : o.fonte === 'site' ? 'Site do mercado' : o.tipo === 'clube' ? 'Preço de clube' : 'Para todos'} clube={o.tipo === 'clube'} />
                       {naLista(o.item) && <Etiqueta texto="Na sua lista" destaque />}
                     </View>
                   </View>

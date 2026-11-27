@@ -19,6 +19,7 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
   const [mercado, setMercado] = useState('');
   const [preco, setPreco] = useState('');
   const [aviso, setAviso] = useState<string | null>(null);
+  const [fonteAtual, setFonteAtual] = useState<'menorpreco' | 'site'>('menorpreco');
   const valor = numeroOuNulo(preco);
 
   async function buscar() {
@@ -28,6 +29,7 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
     } catch {
       setAviso(`Busque por "${item}" no Menor Preço.`);
     }
+    setFonteAtual('menorpreco');
     Linking.openURL(MENOR_PRECO_IOS).catch(() => {});
   }
 
@@ -36,17 +38,20 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
     if (!m) return;
     Linking.openURL(linkBusca(m, item)).catch(() => {});
     setMercado(nome);
+    setFonteAtual('site');
     setAviso(
       nome === 'Fort'
         ? 'Preço do site do Fort: pode ser exclusivo da internet e valer só hoje. Se quiser, anote abaixo.'
-        : `Abri a busca de "${item}" para ${nome}. Preço de site ou encarte pode diferir da loja. Se achar, anote abaixo.`,
+        : m.busca
+          ? `Abri a busca de "${item}" no site do ${nome}. O preço do site pode diferir da loja. Anote abaixo.`
+          : `${nome} não tem busca no site que eu consiga abrir direto; abri uma busca no Google. Se achar o preço, anote abaixo.`,
     );
   }
 
   function salvar() {
     if (!mercado.trim() || valor === null) return;
     const validade = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
-    salvarOferta({ item, mercado: mercado.trim(), precoOferta: valor, tipo: 'todos', validade, fonte: 'menorpreco' });
+    salvarOferta({ item, mercado: mercado.trim(), precoOferta: valor, tipo: 'todos', validade, fonte: fonteAtual });
     setAviso(`${reais(valor)} no ${mercado.trim()} anotado (vale por 3 dias na comparação).`);
     setPreco('');
   }
@@ -57,7 +62,7 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
       <Text style={[s.detalhe, { lineHeight: 17 }]}>Ver preço no site de:</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {MERCADOS.map((m) => (
-          <Chip key={m.nome} texto={m.nome} onPress={() => verNoSite(m.nome)} />
+          <Chip key={m.nome} texto={m.busca ? m.nome : `${m.nome} (Google)`} onPress={() => verNoSite(m.nome)} />
         ))}
       </View>
       <Text style={[s.detalhe, { lineHeight: 17 }]}>Viu um preço? Anote aqui para entrar na comparação:</Text>

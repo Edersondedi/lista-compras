@@ -53,7 +53,7 @@ export const useLoja = create<Estado>()((set, get) => ({
       renomearMercado: (id, mercado) =>
         set((s) => ({ notas: s.notas.map((n) => (n.id === id && mercado.trim() ? { ...n, mercado: mercado.trim() } : n)) })),
 
-      salvarOferta: (oferta) => set((s) => ({ ofertas: [{ ...oferta, id: novoId() }, ...s.ofertas] })),
+      salvarOferta: (oferta) => set((s) => ({ ofertas: [{ ...oferta, id: novoId(), criadoEm: new Date().toISOString() }, ...s.ofertas] })),
       removerOferta: (id) => set((s) => ({ ofertas: s.ofertas.filter((o) => o.id !== id) })),
       alternarClube: (mercado) => {
         const tem = get().clubes.includes(mercado);

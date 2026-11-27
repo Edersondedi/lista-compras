@@ -33,7 +33,7 @@ export function casa(itemLista: string, descricao: string): boolean {
 export interface PrecoEncontrado {
   preco: number;
   data: string;
-  origem: 'nota' | 'oferta' | 'menorpreco';
+  origem: 'nota' | 'oferta' | 'menorpreco' | 'site';
   descricao: string;
 }
 
@@ -50,11 +50,13 @@ export function precoNoMercado(
   ofertas: Oferta[],
   clubes: string[],
   hoje: Date = new Date(),
+  maxDias?: number,
 ): PrecoEncontrado | null {
   let melhor: PrecoEncontrado | null = null;
+  const recente = (iso?: string) => maxDias === undefined || !iso || idadeDias(iso, hoje) <= maxDias;
 
   const doMercado = notas
-    .filter((n) => normalizar(n.mercado) === normalizar(mercado))
+    .filter((n) => normalizar(n.mercado) === normalizar(mercado) && recente(n.data))
     .sort((a, b) => b.data.localeCompare(a.data));
   for (const nota of doMercado) {
     const it = nota.itens.find((i) => casa(item, i.descricao));
@@ -69,8 +71,9 @@ export function precoNoMercado(
     if (normalizar(o.mercado) !== normalizar(mercado)) continue;
     if (!casa(item, o.item) || !ofertaValida(o, hoje)) continue;
     if (o.tipo === 'clube' && !temClube) continue;
+    if (!recente(o.criadoEm)) continue;
     if (!melhor || o.precoOferta < melhor.preco) {
-      melhor = { preco: o.precoOferta, data: o.validade ?? hoje.toISOString(), origem: o.fonte === 'menorpreco' ? 'menorpreco' : 'oferta', descricao: o.item };
+      melhor = { preco: o.precoOferta, data: o.criadoEm ?? hoje.toISOString(), origem: o.fonte === 'menorpreco' ? 'menorpreco' : o.fonte === 'site' ? 'site' : 'oferta', descricao: o.item };
     }
   }
   return melhor;
@@ -102,6 +105,7 @@ export function compararMercados(
   ofertas: Oferta[],
   clubes: string[],
   hoje: Date = new Date(),
+  maxDias?: number,
 ): ResultadoMercado[] {
   const pendentes = lista.filter((i) => !i.comprado);
   return mercadosConhecidos(notas, ofertas)
@@ -110,7 +114,7 @@ export function compararMercados(
       const faltando: string[] = [];
       let total = 0;
       for (const item of pendentes) {
-        const p = precoNoMercado(item.nome, mercado, notas, ofertas, clubes, hoje);
+        const p = precoNoMercado(item.nome, mercado, notas, ofertas, clubes, hoje, maxDias);
         if (p) {
           precos[item.id] = p;
           total += p.preco;
@@ -222,6 +226,18 @@ export function arred(v: number): number {
 
 export function reais(v: number): string {
   return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+/** Dias inteiros entre a data do preço e hoje. */
+export function idadeDias(dataIso: string, hoje: Date = new Date()): number {
+  const d = new Date(dataIso);
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const b = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime();
+  return Math.max(0, Math.round((b - a) / 86_400_000));
+}
+
+export function textoIdade(dias: number): string {
+  return dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias} dias`;
 }
 
 /** "1 item", "3 itens" */

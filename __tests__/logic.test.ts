@@ -72,6 +72,12 @@ describe('compararMercados', () => {
     ]);
   });
 
+  it('ignora preços mais velhos que o limite de dias', () => {
+    const r = compararMercados(lista, notas, [], [], hoje, 8); // notas de 20/11 (7 dias) e 18/11 (9 dias)
+    expect(r.find((x) => x.mercado === 'Mercado A')!.encontrados).toBe(3);
+    expect(r.find((x) => x.mercado === 'Mercado B')!.encontrados).toBe(0);
+  });
+
   it('prioriza mercado que tem mais itens', () => {
     const n2 = [...notas, nota('Mercado C', '2026-11-25T10:00:00', [['ARROZ', 10]])];
     expect(compararMercados(lista, n2, [], [], hoje).at(-1)!.mercado).toBe('Mercado C');

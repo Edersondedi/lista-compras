@@ -1,19 +1,29 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { compararMercados, melhorDivisao, menorPorItem, qtdItens, reais } from '../lib/logic';
+import { compararMercados, idadeDias, melhorDivisao, menorPorItem, PrecoEncontrado, qtdItens, reais, textoIdade } from '../lib/logic';
 import { useLoja } from '../store';
-import { Aviso, Cartao, Secao, cores, s } from '../ui';
+import { Aviso, Cartao, Chip, Secao, cores, s } from '../ui';
 
-function dataCurta(iso: string) {
-  const [a, m, d] = iso.slice(0, 10).split('-');
-  return `${d}/${m}/${a.slice(2)}`;
+const LIMITE_DIAS = 15;
+
+function fonte(p: PrecoEncontrado) {
+  const origem = p.origem === 'menorpreco' ? 'Menor Preço' : p.origem === 'site' ? 'site do mercado' : p.origem === 'oferta' ? 'oferta' : 'nota';
+  return `${origem}, ${textoIdade(idadeDias(p.data))}`;
+}
+
+function velho(p: PrecoEncontrado) {
+  return idadeDias(p.data) > 7;
 }
 
 export default function TelaComparar() {
   const { lista, notas, ofertas, clubes } = useLoja();
   const pendentes = lista.filter((i) => !i.comprado);
-  const resultados = useMemo(() => compararMercados(lista, notas, ofertas, clubes), [lista, notas, ofertas, clubes]);
+  const [soRecentes, setSoRecentes] = useState(true);
+  const resultados = useMemo(
+    () => compararMercados(lista, notas, ofertas, clubes, new Date(), soRecentes ? LIMITE_DIAS : undefined),
+    [lista, notas, ofertas, clubes, soRecentes],
+  );
   const divisao = useMemo(() => melhorDivisao(resultados, lista), [resultados, lista]);
   const porItem = useMemo(() => menorPorItem(resultados, lista), [resultados, lista]);
   const melhor = resultados[0];
@@ -25,6 +35,14 @@ export default function TelaComparar() {
         <Text style={s.titulo}>Onde comprar</Text>
         <Text style={s.subtitulo}>
           {pendentes.length} {pendentes.length === 1 ? 'item' : 'itens'} · {resultados.length} {resultados.length === 1 ? 'mercado' : 'mercados'} com preço registrado
+        </Text>
+
+        <View style={{ flexDirection: 'row', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+          <Chip texto={`Só preços dos últimos ${LIMITE_DIAS} dias`} ativo={soRecentes} onPress={() => setSoRecentes(true)} />
+          <Chip texto="Todos os preços" ativo={!soRecentes} onPress={() => setSoRecentes(false)} />
+        </View>
+        <Text style={[s.detalhe, { marginTop: 6, lineHeight: 17 }]}>
+          Os preços vêm só do que entra no app: suas notas fiscais, preços anotados (Menor Preço ou sites) e ofertas cadastradas. O app não busca preços sozinho.
         </Text>
 
         {pendentes.length === 0 && <Aviso tipo="info">Adicione itens na lista para comparar.</Aviso>}
@@ -56,16 +74,20 @@ export default function TelaComparar() {
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={[s.textoItem, { fontWeight: '600' }]}>{item.nome}</Text>
                     {ofertas.length === 0 ? (
-                      <Text style={[s.detalhe, { color: cores.alertaTexto }]}>Sem preço em nenhum mercado. Use o botão Preço na lista.</Text>
+                      <Text style={[s.detalhe, { color: cores.alertaTexto }]}>
+                        Sem preço{soRecentes ? ` dos últimos ${LIMITE_DIAS} dias` : ''}. Use o botão Preço na lista para buscar e anotar.
+                      </Text>
                     ) : (
                       <>
                         <Text style={[s.detalhe, { color: cores.verdeEscuro, fontWeight: '600' }]}>
-                          Mais barato: {ofertas[0].mercado}
-                          {ofertas[0].preco.origem === 'menorpreco' ? ' (Menor Preço)' : ofertas[0].preco.origem === 'oferta' ? ' (oferta)' : ''}
+                          Mais barato: {ofertas[0].mercado} ({fonte(ofertas[0].preco)})
                         </Text>
+                        {velho(ofertas[0].preco) && (
+                          <Text style={[s.detalhe, { color: cores.alertaTexto }]}>Preço com mais de 7 dias: confira antes de ir.</Text>
+                        )}
                         {ofertas.slice(1).map((o) => (
-                          <Text key={o.mercado} style={s.detalhe}>
-                            {o.mercado}: {reais(o.preco.preco)} (+{reais(o.preco.preco - ofertas[0].preco.preco)})
+                          <Text key={o.mercado} style={[s.detalhe, velho(o.preco) && { color: cores.alertaTexto }]}>
+                            {o.mercado}: {reais(o.preco.preco)} (+{reais(o.preco.preco - ofertas[0].preco.preco)}) · {fonte(o.preco)}
                           </Text>
                         ))}
                       </>
@@ -91,9 +113,8 @@ export default function TelaComparar() {
                     </Text>
                     {pendentes.map((i) =>
                       r.precos[i.id] ? (
-                        <Text key={i.id} style={s.detalhe}>
-                          {i.nome}: {reais(r.precos[i.id].preco)}
-                          {r.precos[i.id].origem === 'menorpreco' ? ' (anotado do Menor Preço)' : r.precos[i.id].origem === 'oferta' ? ' (oferta)' : ` (nota de ${dataCurta(r.precos[i.id].data)})`}
+                        <Text key={i.id} style={[s.detalhe, velho(r.precos[i.id]) && { color: cores.alertaTexto }]}>
+                          {i.nome}: {reais(r.precos[i.id].preco)} ({fonte(r.precos[i.id])})
                         </Text>
                       ) : null,
                     )}
