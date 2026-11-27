@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Lista da casa: só quem sabe o código (8 letras/números) lê ou altera. Ninguém consegue listar os códigos existentes.
+    match /listas/{codigo} {
+      allow get: if codigo.matches('^[2-9A-HJ-KMNP-Z]{8}$');
+      allow create, update: if codigo.matches('^[2-9A-HJ-KMNP-Z]{8}$')
+        && request.resource.data.keys().hasOnly(['itens', 'atualizadoEm'])
+        && request.resource.data.itens is map
+        && request.resource.data.itens.size() <= 500;
+      allow list, delete: if false;
+    }
+    // Qualquer outro caminho: fechado.
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

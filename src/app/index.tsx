@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { confirmar } from '../confirmar';
 import { Compartilhar } from '../Compartilhar';
+import { ListaDaCasa } from '../ListaDaCasa';
 import { PrecoRapido } from '../PrecoRapido';
 import { sugerirAcabando } from '../lib/logic';
 import { CATEGORIAS, Categoria } from '../lib/types';
@@ -59,6 +60,7 @@ export default function TelaLista() {
           <Botao titulo="Adicionar à lista" onPress={adicionar} desabilitado={!nome.trim()} />
         </Cartao>
 
+        <ListaDaCasa />
         <Compartilhar />
 
         {sugestoes.length > 0 && (
