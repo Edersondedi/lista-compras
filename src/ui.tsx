@@ -77,7 +77,7 @@ export function Aviso({ children, tipo = 'alerta' }: { children: ReactNode; tipo
   const info = tipo === 'info';
   return (
     <View style={[s.aviso, { backgroundColor: info ? cores.verdeClaro : cores.alerta }]}>
-      <Text style={{ color: info ? cores.verdeEscuro : cores.alertaTexto, fontSize: 13, lineHeight: 18 }}>{children}</Text>
+      <Text selectable style={{ color: info ? cores.verdeEscuro : cores.alertaTexto, fontSize: 13, lineHeight: 18 }}>{children}</Text>
     </View>
   );
 }

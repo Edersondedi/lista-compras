@@ -19,7 +19,12 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "name": "Lista de Compras",
+      "shortName": "Compras",
+      "themeColor": "#1F7A4D",
+      "backgroundColor": "#F6F7F5"
     },
     "plugins": [
       "expo-router",
@@ -30,6 +35,9 @@
         }
       ]
     ],
-    "scheme": "listacompras"
+    "scheme": "listacompras",
+    "experiments": {
+      "baseUrl": "/lista-compras"
+    }
   }
 }

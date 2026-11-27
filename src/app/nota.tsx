@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { confirmar } from '../confirmar';
 import { casa, numeroOuNulo, reais } from '../lib/logic';
 import { buscarNfce, pareceQrNfce } from '../lib/nfce';
 import { ItemNota } from '../lib/types';
@@ -16,6 +17,7 @@ export default function TelaNota() {
   const [modo, setModo] = useState<Modo>('inicio');
   const [msg, setMsg] = useState<string | null>(null);
   const travado = useRef(false);
+  const [link, setLink] = useState('');
 
   // entrada manual
   const [mercado, setMercado] = useState('');
@@ -50,9 +52,10 @@ export default function TelaNota() {
   async function aoLer(conteudo: string) {
     if (travado.current) return;
     travado.current = true;
+    conteudo = conteudo.trim();
     if (!pareceQrNfce(conteudo)) {
       setModo('inicio');
-      setMsg('Esse código não parece o QR Code de uma NFC-e. Tente o QR do rodapé do cupom.');
+      setMsg(`O código lido não parece o QR Code de uma NFC-e. Conteúdo lido: "${conteudo.slice(0, 120)}"`);
       return;
     }
     setModo('lendo');
@@ -60,7 +63,7 @@ export default function TelaNota() {
       const lida = await buscarNfce(conteudo);
       if (!lida) {
         setModo('manual');
-        setMsg('Não consegui ler os itens dessa nota (o layout do portal pode ser diferente). Digite os itens abaixo.');
+        setMsg(`QR Code lido, mas não consegui extrair os itens da página da Sefaz (layout diferente do esperado). Me mande este link para eu ajustar: ${conteudo}`);
         return;
       }
       salvarNota({ mercado: lida.mercado, data: lida.data ?? new Date().toISOString(), itens: lida.itens, total: lida.total, origem: 'qrcode', url: conteudo });
@@ -69,7 +72,8 @@ export default function TelaNota() {
       setMsg(`Nota de ${lida.mercado} salva: ${lida.itens.length} itens, ${reais(lida.total)}. ${marcados} itens da lista marcados como comprados.`);
     } catch (e) {
       setModo('manual');
-      setMsg(`Não consegui acessar o portal da nota (${(e as Error).message}). Digite os itens abaixo.`);
+      const motivo = Platform.OS === 'web' ? 'no navegador o acesso ao portal da Sefaz é bloqueado' : (e as Error).message;
+      setMsg(`QR Code lido, mas não consegui abrir a página da nota (${motivo}). Digite os itens abaixo. Link: ${conteudo}`);
     }
   }
 
@@ -124,6 +128,21 @@ export default function TelaNota() {
           <View style={{ gap: 10, marginTop: 16 }}>
             <Botao titulo="Escanear QR Code da nota" onPress={abrirCamera} />
             {modo !== 'manual' && <Botao tipo="secundario" titulo="Digitar compra manualmente" onPress={() => setModo('manual')} />}
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
+              <Campo rotulo="Ou cole o link da nota (do QR Code)" value={link} onChangeText={setLink} placeholder="https://sat.sef.sc.gov.br/..." autoCapitalize="none" autoCorrect={false} />
+              <View style={{ width: 90 }}>
+                <Botao
+                  tipo="secundario"
+                  titulo="Ler"
+                  desabilitado={!link.trim()}
+                  onPress={() => {
+                    travado.current = false;
+                    aoLer(link);
+                    setLink('');
+                  }}
+                />
+              </View>
+            </View>
           </View>
         )}
 
@@ -159,10 +178,7 @@ export default function TelaNota() {
                   key={n.id}
                   accessibilityRole="button"
                   onLongPress={() =>
-                    Alert.alert('Excluir compra', `Apagar a compra de ${n.mercado}? Os preços dela saem da comparação.`, [
-                      { text: 'Cancelar', style: 'cancel' },
-                      { text: 'Excluir', style: 'destructive', onPress: () => removerNota(n.id) },
-                    ])
+                    confirmar('Excluir compra', `Apagar a compra de ${n.mercado}? Os preços dela saem da comparação.`, 'Excluir', () => removerNota(n.id))
                   }
                   style={s.linha}
                 >
