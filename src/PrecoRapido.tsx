@@ -30,6 +30,13 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
     Linking.openURL(MENOR_PRECO_IOS).catch(() => {});
   }
 
+  function verNoFort() {
+    // Página pública de busca do site do Fort (preço do site, que pode diferir da loja)
+    Linking.openURL(`https://www.fortatacadista.com.br/busca/${encodeURIComponent(item)}`).catch(() => {});
+    setMercado('Fort');
+    setAviso('Preço do site do Fort: pode ser exclusivo da internet e valer só hoje. Se quiser, anote abaixo.');
+  }
+
   function salvar() {
     if (!mercado.trim() || valor === null) return;
     const validade = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
@@ -41,6 +48,7 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
   return (
     <View style={{ paddingHorizontal: 14, paddingBottom: 14, paddingTop: 4, gap: 10, backgroundColor: '#FAFBFA', borderBottomWidth: 1, borderBottomColor: '#EEF1EF' }}>
       <Botao tipo="secundario" titulo="Buscar no Menor Preço Brasil" onPress={buscar} />
+      <Botao tipo="secundario" titulo="Ver no site do Fort" onPress={verNoFort} />
       <Text style={[s.detalhe, { lineHeight: 17 }]}>Viu um preço? Anote aqui para entrar na comparação:</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {mercados.map((m) => (
