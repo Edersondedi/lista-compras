@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 import { novoId } from './lib/logic';
 import { Categoria, ItemLista, NotaFiscal, Oferta } from './lib/types';
 
@@ -23,9 +22,7 @@ interface Estado {
   alternarClube: (mercado: string) => void;
 }
 
-export const useLoja = create<Estado>()(
-  persist(
-    (set, get) => ({
+export const useLoja = create<Estado>()((set, get) => ({
       lista: [],
       notas: [],
       ofertas: [],
@@ -59,7 +56,33 @@ export const useLoja = create<Estado>()(
         const tem = get().clubes.includes(mercado);
         set((s) => ({ clubes: tem ? s.clubes.filter((c) => c !== mercado) : [...s.clubes, mercado] }));
       },
-    }),
-    { name: 'lista-compras-v1', storage: createJSONStorage(() => AsyncStorage) },
-  ),
-);
+}));
+
+// Salvamento no celular (AsyncStorage). Feito à mão, sem zustand/middleware,
+// para funcionar também no Expo Snack. Formato compatível com o persist do zustand.
+const CHAVE = 'lista-compras-v1';
+let carregado = false;
+
+AsyncStorage.getItem(CHAVE)
+  .then((json) => {
+    if (!json) return;
+    const salvo = JSON.parse(json)?.state;
+    if (salvo) {
+      useLoja.setState({
+        lista: salvo.lista ?? [],
+        notas: salvo.notas ?? [],
+        ofertas: salvo.ofertas ?? [],
+        clubes: salvo.clubes ?? [],
+      });
+    }
+  })
+  .catch(() => {})
+  .finally(() => {
+    carregado = true;
+  });
+
+useLoja.subscribe((s) => {
+  if (!carregado) return; // não sobrescreve os dados salvos antes de lê-los
+  const { lista, notas, ofertas, clubes } = s;
+  AsyncStorage.setItem(CHAVE, JSON.stringify({ state: { lista, notas, ofertas, clubes }, version: 0 })).catch(() => {});
+});
