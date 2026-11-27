@@ -7,14 +7,24 @@ import { useLoja } from './store';
 import { Aviso, Botao, Cartao, cores, s } from './ui';
 
 /** Lê ?lista=... do endereço (quando a pessoa abre o link recebido no WhatsApp). */
+const CHAVE_ULTIMA = 'compra-certa-ultima-lista';
+
 function listaDoEndereco(): ItemCompartilhado[] | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-  const itens = lerLista(window.location.search);
-  if (itens) {
-    // limpa o endereço para não importar de novo ao recarregar
-    window.history.replaceState(null, '', window.location.pathname + window.location.hash);
-  }
-  return itens;
+  const busca = window.location.search;
+  try {
+    if (busca && localStorage.getItem(CHAVE_ULTIMA) === busca) return null; // já tratada antes
+  } catch {}
+  return lerLista(busca);
+}
+
+/** Marca o link como tratado e tira ?lista= do endereço, para não perguntar de novo ao recarregar. */
+function limparEndereco() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.location.search.includes('lista=')) return;
+  try {
+    localStorage.setItem(CHAVE_ULTIMA, window.location.search);
+  } catch {}
+  window.history.replaceState(window.history.state, '', window.location.pathname + window.location.hash);
 }
 
 export function Compartilhar() {
@@ -75,6 +85,7 @@ export function Compartilhar() {
     setRecebidos(null);
     setColado('');
     setAberto(null);
+    limparEndereco();
   }
 
   if (sep) {
@@ -90,7 +101,11 @@ export function Compartilhar() {
           <Text style={s.detalhe}>Já na sua lista (não serão repetidos): {sep.repetidos.map((i) => i.nome).join(', ')}</Text>
         )}
         {sep.novos.length > 0 && <Botao titulo={`Juntar à minha lista (${qtdItens(sep.novos.length)})`} onPress={juntar} />}
-        <Botao tipo="secundario" titulo="Descartar" onPress={() => setRecebidos(null)} />
+        <Botao tipo="secundario" titulo="Descartar" onPress={() => {
+            setRecebidos(null);
+            limparEndereco();
+          }}
+        />
       </Cartao>
     );
   }
