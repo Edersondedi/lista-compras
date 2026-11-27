@@ -10,6 +10,9 @@ interface Estado {
   clubes: string[]; // mercados em que o usuário é cadastrado no clube/cooperativa
 
   pronto: boolean;
+  /** Código da lista compartilhada da casa (null = lista só neste aparelho). */
+  codigoLista: string | null;
+  statusSync: 'desligado' | 'conectando' | 'ok' | 'erro';
   adicionarItem: (nome: string, quantidade: string, categoria: Categoria) => void;
   receberItens: (itens: { nome: string; quantidade: string; categoria: Categoria }[]) => void;
   alternarComprado: (id: string) => void;
@@ -31,6 +34,8 @@ export const useLoja = create<Estado>()((set, get) => ({
       ofertas: [],
       clubes: [],
       pronto: false,
+      codigoLista: null,
+      statusSync: 'desligado',
 
       receberItens: (itens) => {
         const agora = new Date().toISOString();
@@ -89,6 +94,7 @@ AsyncStorage.getItem(CHAVE)
         notas: salvo.notas ?? [],
         ofertas: salvo.ofertas ?? [],
         clubes: salvo.clubes ?? [],
+        codigoLista: salvo.codigoLista ?? null,
       });
     }
   })
@@ -100,6 +106,6 @@ AsyncStorage.getItem(CHAVE)
 
 useLoja.subscribe((s) => {
   if (!carregado) return; // não sobrescreve os dados salvos antes de lê-los
-  const { lista, notas, ofertas, clubes } = s;
-  AsyncStorage.setItem(CHAVE, JSON.stringify({ state: { lista, notas, ofertas, clubes }, version: 0 })).catch(() => {});
+  const { lista, notas, ofertas, clubes, codigoLista } = s;
+  AsyncStorage.setItem(CHAVE, JSON.stringify({ state: { lista, notas, ofertas, clubes, codigoLista }, version: 0 })).catch(() => {});
 });
