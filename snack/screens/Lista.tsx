@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from '../nav';
+import { confirmar } from '../confirmar';
 import { sugerirAcabando } from '../lib/logic';
 import { CATEGORIAS, Categoria } from '../lib/types';
 import { useLoja } from '../store';
@@ -28,10 +29,7 @@ export default function TelaLista() {
   }
 
   function confirmarRemocao(id: string, item: string) {
-    Alert.alert('Remover item', `Tirar "${item}" da lista?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: () => removerItem(id) },
-    ]);
+    confirmar('Remover item', `Tirar "${item}" da lista?`, 'Remover', () => removerItem(id));
   }
 
   return (
@@ -122,7 +120,7 @@ export default function TelaLista() {
 
         {lista.length > 0 && (
           <View style={{ gap: 10, marginTop: 20 }}>
-            <Botao titulo={`Comparar preços (${pendentes} itens)`} onPress={() => router.navigate('/comparar')} desabilitado={pendentes === 0} />
+            <Botao titulo={`Comparar preços (${pendentes} ${pendentes === 1 ? "item" : "itens"})`} onPress={() => router.navigate('/comparar')} desabilitado={pendentes === 0} />
             {comprados > 0 && <Botao tipo="secundario" titulo="Limpar itens já comprados" onPress={limparComprados} />}
             <Text style={[s.detalhe, { textAlign: 'center' }]}>Toque para marcar · segure para remover</Text>
           </View>

@@ -23,7 +23,7 @@ export default function TelaComparar() {
       <ScrollView contentContainerStyle={s.conteudo}>
         <Text style={s.titulo}>Onde comprar</Text>
         <Text style={s.subtitulo}>
-          {pendentes.length} itens · {resultados.length} mercados com preço registrado
+          {pendentes.length} {pendentes.length === 1 ? 'item' : 'itens'} · {resultados.length} {resultados.length === 1 ? 'mercado' : 'mercados'} com preço registrado
         </Text>
 
         {pendentes.length === 0 && <Aviso tipo="info">Adicione itens na lista para comparar.</Aviso>}
