@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { casa, mercadosConhecidos, numeroOuNulo, reais } from '../lib/logic';
+import { linkBusca, linkEncarte, MERCADOS } from '../lib/mercados';
 import { useLoja } from '../store';
 import { Aviso, Botao, Campo, Cartao, Chip, Secao, cores, s } from '../ui';
 
 export default function TelaPromocoes() {
   const { lista, notas, ofertas, clubes, alternarClube, salvarOferta, removerOferta } = useLoja();
-  const mercados = [...new Set([...mercadosConhecidos(notas, ofertas), ...clubes])];
+  const mercados = [...new Set([...MERCADOS.map((m) => m.nome), ...mercadosConhecidos(notas, ofertas), ...clubes])].filter((m) => !m.startsWith('Mercado ('));
 
   const [novoMercado, setNovoMercado] = useState('');
   const [item, setItem] = useState('');
@@ -38,6 +39,15 @@ export default function TelaPromocoes() {
   }
 
   const naLista = (nome: string) => lista.some((i) => !i.comprado && casa(i.nome, nome));
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const pendentes = lista.filter((i) => !i.comprado);
+  const promosDaLista = pendentes.map((i) => ({
+    item: i,
+    ofertas: ofertas
+      .filter((o) => casa(i.nome, o.item) && (!o.validade || o.validade >= hojeIso))
+      .sort((a, b) => a.precoOferta - b.precoOferta),
+  }));
+  const [itemBusca, setItemBusca] = useState<string | null>(null);
   const ordenadas = [...ofertas].sort((a, b) => Number(naLista(b.item)) - Number(naLista(a.item)));
 
   return (
@@ -45,6 +55,56 @@ export default function TelaPromocoes() {
       <ScrollView contentContainerStyle={s.conteudo} keyboardShouldPersistTaps="handled">
         <Text style={s.titulo}>Promoções e clubes</Text>
         <Text style={s.subtitulo}>Ofertas de itens da sua lista aparecem primeiro</Text>
+
+        {pendentes.length > 0 && (
+          <Secao titulo="Promoções dos itens da sua lista">
+            <Cartao>
+              {promosDaLista.map(({ item, ofertas: os }) => (
+                <View key={item.id} style={{ borderBottomWidth: 1, borderBottomColor: '#EEF1EF' }}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setItemBusca(itemBusca === item.id ? null : item.id)}
+                    style={[s.linha, { borderBottomWidth: 0, alignItems: 'flex-start' }]}
+                  >
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={[s.textoItem, { fontWeight: '600' }]}>{item.nome}</Text>
+                      {os.length === 0 ? (
+                        <Text style={s.detalhe}>Nenhuma promoção registrada. Toque para procurar nos mercados.</Text>
+                      ) : (
+                        os.map((o) => (
+                          <Text key={o.id} style={[s.detalhe, o === os[0] && { color: cores.verdeEscuro, fontWeight: '600' }]}>
+                            {o.mercado}: {reais(o.precoOferta)}
+                            {o.tipo === 'clube' ? (clubes.includes(o.mercado) ? ' (clube, você é cadastrado)' : ' (só para clube)') : ''}
+                            {o.validade ? ` · até ${o.validade.slice(8, 10)}/${o.validade.slice(5, 7)}` : ''}
+                          </Text>
+                        ))
+                      )}
+                    </View>
+                    <Text style={{ color: cores.verde, fontWeight: '600', fontSize: 13 }}>{itemBusca === item.id ? 'Fechar' : 'Procurar'}</Text>
+                  </Pressable>
+                  {itemBusca === item.id && (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 14, paddingBottom: 12 }}>
+                      {MERCADOS.map((m) => (
+                        <Chip key={m.nome} texto={m.nome} onPress={() => Linking.openURL(linkBusca(m, item.nome)).catch(() => {})} />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </Cartao>
+            <Text style={[s.detalhe, { lineHeight: 17 }]}>
+              O app ainda não busca promoções sozinho nos sites dos mercados. Encontrou uma? Cadastre abaixo e ela aparece aqui e na comparação.
+            </Text>
+          </Secao>
+        )}
+
+        <Secao titulo="Encartes da semana">
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            {MERCADOS.map((m) => (
+              <Chip key={m.nome} texto={m.nome} onPress={() => Linking.openURL(linkEncarte(m)).catch(() => {})} />
+            ))}
+          </View>
+        </Secao>
 
         <Secao titulo="Onde você é cadastrado (clube ou cooperado)">
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

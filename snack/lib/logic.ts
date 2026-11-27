@@ -121,6 +121,24 @@ export function compararMercados(
     .sort((a, b) => b.encontrados - a.encontrados || a.total - b.total);
 }
 
+export interface MenorItem {
+  item: ItemLista;
+  ofertas: { mercado: string; preco: PrecoEncontrado }[]; // do menor para o maior
+}
+
+/** Para cada item pendente, onde está o menor preço conhecido (e os demais mercados, em ordem). */
+export function menorPorItem(resultados: ResultadoMercado[], lista: ItemLista[]): MenorItem[] {
+  return lista
+    .filter((i) => !i.comprado)
+    .map((item) => ({
+      item,
+      ofertas: resultados
+        .filter((r) => r.precos[item.id])
+        .map((r) => ({ mercado: r.mercado, preco: r.precos[item.id] }))
+        .sort((a, b) => a.preco.preco - b.preco.preco),
+    }));
+}
+
 export interface Divisao {
   mercados: [string, string];
   total: number;

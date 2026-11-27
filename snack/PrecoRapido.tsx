@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { mercadosConhecidos, numeroOuNulo, reais } from './lib/logic';
+import { linkBusca, MERCADOS, NOMES_MERCADOS } from './lib/mercados';
 import { useLoja } from './store';
 import { Botao, Campo, Chip, cores, s } from './ui';
 
 // Página do Menor Preço Brasil na App Store (o app não tem link de busca conhecido).
 const MENOR_PRECO_IOS = 'https://apps.apple.com/br/app/menor-preco-brasil/id1483644418';
-const MERCADOS_PADRAO = ['Cooper', 'Koch', 'Unidos', 'Fort'];
+const MERCADOS_PADRAO = NOMES_MERCADOS;
 
 /** Painel aberto embaixo de um item da lista: buscar no Menor Preço e anotar o preço visto. */
 export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => void }) {
@@ -30,11 +31,16 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
     Linking.openURL(MENOR_PRECO_IOS).catch(() => {});
   }
 
-  function verNoFort() {
-    // Página pública de busca do site do Fort (preço do site, que pode diferir da loja)
-    Linking.openURL(`https://www.fortatacadista.com.br/busca/${encodeURIComponent(item)}`).catch(() => {});
-    setMercado('Fort');
-    setAviso('Preço do site do Fort: pode ser exclusivo da internet e valer só hoje. Se quiser, anote abaixo.');
+  function verNoSite(nome: string) {
+    const m = MERCADOS.find((x) => x.nome === nome);
+    if (!m) return;
+    Linking.openURL(linkBusca(m, item)).catch(() => {});
+    setMercado(nome);
+    setAviso(
+      nome === 'Fort'
+        ? 'Preço do site do Fort: pode ser exclusivo da internet e valer só hoje. Se quiser, anote abaixo.'
+        : `Abri a busca de "${item}" para ${nome}. Preço de site ou encarte pode diferir da loja. Se achar, anote abaixo.`,
+    );
   }
 
   function salvar() {
@@ -48,7 +54,12 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
   return (
     <View style={{ paddingHorizontal: 14, paddingBottom: 14, paddingTop: 4, gap: 10, backgroundColor: '#FAFBFA', borderBottomWidth: 1, borderBottomColor: '#EEF1EF' }}>
       <Botao tipo="secundario" titulo="Buscar no Menor Preço Brasil" onPress={buscar} />
-      <Botao tipo="secundario" titulo="Ver no site do Fort" onPress={verNoFort} />
+      <Text style={[s.detalhe, { lineHeight: 17 }]}>Ver preço no site de:</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {MERCADOS.map((m) => (
+          <Chip key={m.nome} texto={m.nome} onPress={() => verNoSite(m.nome)} />
+        ))}
+      </View>
       <Text style={[s.detalhe, { lineHeight: 17 }]}>Viu um preço? Anote aqui para entrar na comparação:</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {mercados.map((m) => (

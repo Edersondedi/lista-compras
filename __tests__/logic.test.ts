@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { casa, compararMercados, melhorDivisao, numeroOuNulo, reais, sugerirAcabando } from '../src/lib/logic';
+import { casa, compararMercados, melhorDivisao, menorPorItem, numeroOuNulo, reais, sugerirAcabando } from '../src/lib/logic';
 import { ItemLista, NotaFiscal, Oferta } from '../src/lib/types';
 
 const item = (id: string, nome: string, comprado = false): ItemLista => ({
@@ -61,6 +61,15 @@ describe('compararMercados', () => {
     const d = melhorDivisao(r, lista)!;
     expect(d.total).toBe(51.3); // arroz B 24.5 + café A 21.9 + leite B 4.9
     expect(d.porMercado['Mercado A'].itens).toEqual(['café']);
+  });
+
+  it('menor preço por item', () => {
+    const m = menorPorItem(compararMercados(lista, notas, [], [], hoje), lista);
+    expect(m.map((x) => [x.item.nome, x.ofertas[0]?.mercado, x.ofertas[0]?.preco.preco])).toEqual([
+      ['arroz', 'Mercado B', 24.5],
+      ['café', 'Mercado A', 21.9],
+      ['leite', 'Mercado B', 4.9],
+    ]);
   });
 
   it('prioriza mercado que tem mais itens', () => {

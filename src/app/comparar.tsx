@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { compararMercados, melhorDivisao, qtdItens, reais } from '../lib/logic';
+import { compararMercados, melhorDivisao, menorPorItem, qtdItens, reais } from '../lib/logic';
 import { useLoja } from '../store';
 import { Aviso, Cartao, Secao, cores, s } from '../ui';
 
@@ -15,6 +15,7 @@ export default function TelaComparar() {
   const pendentes = lista.filter((i) => !i.comprado);
   const resultados = useMemo(() => compararMercados(lista, notas, ofertas, clubes), [lista, notas, ofertas, clubes]);
   const divisao = useMemo(() => melhorDivisao(resultados, lista), [resultados, lista]);
+  const porItem = useMemo(() => menorPorItem(resultados, lista), [resultados, lista]);
   const melhor = resultados[0];
   const pior = resultados.filter((r) => r.encontrados === melhor?.encontrados).at(-1);
 
@@ -45,6 +46,36 @@ export default function TelaComparar() {
               {pior && pior !== melhor ? ` · ${reais(pior.total - melhor.total)} a menos que ${pior.mercado}` : ''}
             </Text>
           </View>
+        )}
+
+        {resultados.length > 0 && pendentes.length > 0 && (
+          <Secao titulo="Menor preço por item">
+            <Cartao>
+              {porItem.map(({ item, ofertas }) => (
+                <View key={item.id} style={[s.linha, { alignItems: 'flex-start' }]}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[s.textoItem, { fontWeight: '600' }]}>{item.nome}</Text>
+                    {ofertas.length === 0 ? (
+                      <Text style={[s.detalhe, { color: cores.alertaTexto }]}>Sem preço em nenhum mercado. Use o botão Preço na lista.</Text>
+                    ) : (
+                      <>
+                        <Text style={[s.detalhe, { color: cores.verdeEscuro, fontWeight: '600' }]}>
+                          Mais barato: {ofertas[0].mercado}
+                          {ofertas[0].preco.origem === 'menorpreco' ? ' (Menor Preço)' : ofertas[0].preco.origem === 'oferta' ? ' (oferta)' : ''}
+                        </Text>
+                        {ofertas.slice(1).map((o) => (
+                          <Text key={o.mercado} style={s.detalhe}>
+                            {o.mercado}: {reais(o.preco.preco)} (+{reais(o.preco.preco - ofertas[0].preco.preco)})
+                          </Text>
+                        ))}
+                      </>
+                    )}
+                  </View>
+                  {ofertas.length > 0 && <Text style={{ fontWeight: '700', fontSize: 15, color: cores.verde }}>{reais(ofertas[0].preco.preco)}</Text>}
+                </View>
+              ))}
+            </Cartao>
+          </Secao>
         )}
 
         {resultados.length > 0 && pendentes.length > 0 && (
