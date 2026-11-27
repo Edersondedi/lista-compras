@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from '../nav';
 import { confirmar } from '../confirmar';
+import { Compartilhar } from '../Compartilhar';
 import { PrecoRapido } from '../PrecoRapido';
 import { sugerirAcabando } from '../lib/logic';
 import { CATEGORIAS, Categoria } from '../lib/types';
@@ -37,6 +38,7 @@ export default function TelaLista() {
   return (
     <SafeAreaView style={s.tela} edges={['top']}>
       <ScrollView contentContainerStyle={s.conteudo} keyboardShouldPersistTaps="handled">
+        <Text style={{ color: cores.verde, fontWeight: '700', fontSize: 13 }}>COMPRA CERTA</Text>
         <Text style={s.titulo}>Compras da semana</Text>
         <Text style={s.subtitulo}>
           {pendentes} a comprar{comprados > 0 ? ` · ${comprados} no carrinho` : ''}
@@ -56,6 +58,8 @@ export default function TelaLista() {
           </ScrollView>
           <Botao titulo="Adicionar à lista" onPress={adicionar} desabilitado={!nome.trim()} />
         </Cartao>
+
+        <Compartilhar />
 
         {sugestoes.length > 0 && (
           <Secao titulo="Provavelmente acabando">
