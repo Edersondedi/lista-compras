@@ -87,7 +87,7 @@ export function ListaDaCasa() {
       <Cartao style={{ padding: 14, gap: 10, marginTop: 16, borderColor: cores.verde, borderWidth: 1.5 }}>
         <Text style={{ fontSize: 16, fontWeight: '700', color: cores.texto }}>Entrar na lista da casa {mostrarCodigo(convite)}?</Text>
         <Text style={s.detalhe}>
-          A sua lista passa a ser a mesma da pessoa que te convidou e atualiza sozinha nos dois celulares. Os itens que você
+          A sua lista, as notas fiscais e os preços anotados passam a ser os mesmos da pessoa que te convidou e atualizam sozinhos nos dois celulares. Os itens que você
           ainda não comprou e ela não tem são levados junto.
           {codigoLista ? ' Você vai sair da lista compartilhada atual.' : ''}
         </Text>
@@ -146,7 +146,7 @@ export function ListaDaCasa() {
   return (
     <Cartao style={{ padding: 14, gap: 10, marginTop: 16 }}>
       <Text style={{ fontSize: 15, fontWeight: '700', color: cores.texto }}>Lista da casa</Text>
-      <Text style={s.detalhe}>Use a mesma lista em mais de um celular. Atualiza sozinha, sem cadastro: basta um código.</Text>
+      <Text style={s.detalhe}>Use a mesma lista, notas fiscais e preços anotados em mais de um celular. Atualiza sozinha, sem cadastro: basta um código.</Text>
       {ocupado ? (
         <ActivityIndicator color={cores.verde} />
       ) : modo === 'entrar' ? (

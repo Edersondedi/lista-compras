@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { novoId } from './lib/logic';
+import { normalizar, novoId } from './lib/logic';
 import { Categoria, ItemLista, NotaFiscal, Oferta } from './lib/types';
 
 interface Estado {
@@ -9,6 +9,14 @@ interface Estado {
   ofertas: Oferta[];
   clubes: string[]; // mercados em que o usuário é cadastrado no clube/cooperativa
 
+  /** Meta de gasto do mês, em reais (null = sem meta). Compartilhada na lista da casa. */
+  orcamento: number | null;
+  /** Quantas vezes cada item já foi colocado na lista (chave = nome normalizado). Só neste aparelho. */
+  frequencia: Record<string, { nome: string; categoria: Categoria; vezes: number; ultima: string }>;
+  /** Compra em andamento no modo "No mercado" (só neste aparelho). */
+  carrinho: { mercado: string; precos: Record<string, string>; aberto: boolean } | null;
+  definirOrcamento: (valor: number | null) => void;
+  definirCarrinho: (c: { mercado: string; precos: Record<string, string>; aberto: boolean } | null) => void;
   pronto: boolean;
   /** Código da lista compartilhada da casa (null = lista só neste aparelho). */
   codigoLista: string | null;
@@ -28,18 +36,35 @@ interface Estado {
   alternarClube: (mercado: string) => void;
 }
 
+function contar(freq: Estado['frequencia'], itens: { nome: string; categoria: Categoria }[]): Estado['frequencia'] {
+  const novo = { ...freq };
+  const agora = new Date().toISOString();
+  for (const i of itens) {
+    const k = normalizar(i.nome);
+    if (!k) continue;
+    novo[k] = { nome: i.nome.trim(), categoria: i.categoria, vezes: (novo[k]?.vezes ?? 0) + 1, ultima: agora };
+  }
+  return novo;
+}
+
 export const useLoja = create<Estado>()((set, get) => ({
       lista: [],
       notas: [],
       ofertas: [],
       clubes: [],
       pronto: false,
+      orcamento: null,
+      frequencia: {},
+      carrinho: null,
+      definirOrcamento: (valor) => set({ orcamento: valor && valor > 0 ? valor : null }),
+      definirCarrinho: (c) => set({ carrinho: c }),
       codigoLista: null,
       statusSync: 'desligado',
 
       receberItens: (itens) => {
         const agora = new Date().toISOString();
         set((s) => ({
+          frequencia: contar(s.frequencia, itens),
           lista: [
             ...s.lista,
             ...itens.map((i) => ({ id: novoId(), nome: i.nome, quantidade: i.quantidade, categoria: i.categoria, comprado: false, criadoEm: agora })),
@@ -51,6 +76,7 @@ export const useLoja = create<Estado>()((set, get) => ({
         const limpo = nome.trim();
         if (!limpo) return;
         set((s) => ({
+          frequencia: contar(s.frequencia, [{ nome: limpo, categoria }]),
           lista: [
             ...s.lista,
             { id: novoId(), nome: limpo, quantidade: quantidade.trim(), categoria, comprado: false, criadoEm: new Date().toISOString() },
@@ -95,6 +121,9 @@ AsyncStorage.getItem(CHAVE)
         ofertas: salvo.ofertas ?? [],
         clubes: salvo.clubes ?? [],
         codigoLista: salvo.codigoLista ?? null,
+        orcamento: salvo.orcamento ?? null,
+        frequencia: salvo.frequencia ?? {},
+        carrinho: salvo.carrinho ?? null,
       });
     }
   })
@@ -106,6 +135,7 @@ AsyncStorage.getItem(CHAVE)
 
 useLoja.subscribe((s) => {
   if (!carregado) return; // não sobrescreve os dados salvos antes de lê-los
-  const { lista, notas, ofertas, clubes, codigoLista } = s;
-  AsyncStorage.setItem(CHAVE, JSON.stringify({ state: { lista, notas, ofertas, clubes, codigoLista }, version: 0 })).catch(() => {});
+  const { lista, notas, ofertas, clubes, codigoLista, orcamento, frequencia, carrinho } = s;
+  const state = { lista, notas, ofertas, clubes, codigoLista, orcamento, frequencia, carrinho };
+  AsyncStorage.setItem(CHAVE, JSON.stringify({ state, version: 0 })).catch(() => {});
 });

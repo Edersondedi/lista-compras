@@ -7,18 +7,21 @@ import Lista from './screens/Lista';
 import Comparar from './screens/Comparar';
 import Promocoes from './screens/Promocoes';
 import Nota from './screens/Nota';
+import Gastos from './screens/Gastos';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
-const ABAS: { rota: Rota; titulo: string }[] = [
-  { rota: '/', titulo: 'Lista' },
-  { rota: '/comparar', titulo: 'Comparar' },
-  { rota: '/promocoes', titulo: 'Promoções' },
-  { rota: '/nota', titulo: 'Nota fiscal' },
+const ABAS: { rota: Rota; titulo: string; icone: keyof typeof Ionicons.glyphMap }[] = [
+  { rota: '/', titulo: 'Lista', icone: 'list' },
+  { rota: '/comparar', titulo: 'Comparar', icone: 'swap-horizontal' },
+  { rota: '/promocoes', titulo: 'Promoções', icone: 'pricetag' },
+  { rota: '/gastos', titulo: 'Gastos', icone: 'bar-chart' },
+  { rota: '/nota', titulo: 'Nota fiscal', icone: 'receipt' },
 ];
 
 export default function App() {
   const [rota, setRota] = useState<Rota>('/');
   useEffect(() => ouvirNavegacao(setRota), []);
-  const Tela = { '/': Lista, '/comparar': Comparar, '/promocoes': Promocoes, '/nota': Nota }[rota];
+  const Tela = { '/': Lista, '/comparar': Comparar, '/promocoes': Promocoes, '/gastos': Gastos, '/nota': Nota }[rota];
   return (
     <SafeAreaProvider>
       <View style={{ flex: 1, backgroundColor: cores.fundo }}>
@@ -28,7 +31,8 @@ export default function App() {
             {ABAS.map((a) => (
               <Pressable key={a.rota} accessibilityRole="tab" accessibilityState={{ selected: a.rota === rota }}
                 onPress={() => setRota(a.rota)} style={{ flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: a.rota === rota ? cores.verde : cores.secundario }}>{a.titulo}</Text>
+                <Ionicons name={a.icone} size={22} color={a.rota === rota ? cores.verde : cores.secundario} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: a.rota === rota ? cores.verde : cores.secundario }}>{a.titulo}</Text>
               </Pressable>
             ))}
           </View>

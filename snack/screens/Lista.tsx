@@ -5,6 +5,8 @@ import { router } from '../nav';
 import { confirmar } from '../confirmar';
 import { Compartilhar } from '../Compartilhar';
 import { ListaDaCasa } from '../ListaDaCasa';
+import { NoMercado } from '../NoMercado';
+import { itensFrequentes } from '../lib/gastos';
 import { PrecoRapido } from '../PrecoRapido';
 import { sugerirAcabando } from '../lib/logic';
 import { CATEGORIAS, Categoria } from '../lib/types';
@@ -12,12 +14,13 @@ import { useLoja } from '../store';
 import { Aviso, Botao, Campo, Cartao, Chip, Secao, cores, s } from '../ui';
 
 export default function TelaLista() {
-  const { lista, notas, adicionarItem, alternarComprado, removerItem, limparComprados } = useLoja();
+  const { lista, notas, frequencia, carrinho, definirCarrinho, adicionarItem, alternarComprado, removerItem, limparComprados } = useLoja();
   const [nome, setNome] = useState('');
   const [qtd, setQtd] = useState('');
   const [categoria, setCategoria] = useState<Categoria>('Mercearia');
   const [precoAberto, setPrecoAberto] = useState<string | null>(null);
 
+  const frequentes = useMemo(() => itensFrequentes(frequencia, lista), [frequencia, lista]);
   const sugestoes = useMemo(() => sugerirAcabando(notas, lista).slice(0, 4), [notas, lista]);
   const pendentes = lista.filter((i) => !i.comprado).length;
   const comprados = lista.length - pendentes;
@@ -35,6 +38,8 @@ export default function TelaLista() {
   function confirmarRemocao(id: string, item: string) {
     confirmar('Remover item', `Tirar "${item}" da lista?`, 'Remover', () => removerItem(id));
   }
+
+  if (carrinho?.aberto) return <NoMercado />;
 
   return (
     <SafeAreaView style={s.tela} edges={['top']}>
@@ -58,7 +63,26 @@ export default function TelaLista() {
             ))}
           </ScrollView>
           <Botao titulo="Adicionar à lista" onPress={adicionar} desabilitado={!nome.trim()} />
+          {frequentes.length > 0 && (
+            <View style={{ gap: 6 }}>
+              <Text style={s.detalhe}>Vocês sempre compram:</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {frequentes.map((f) => (
+                  <Chip key={f.nome} texto={`+ ${f.nome}`} onPress={() => adicionarItem(f.nome, '', f.categoria)} />
+                ))}
+              </View>
+            </View>
+          )}
         </Cartao>
+
+        {pendentes + comprados > 0 && (
+          <View style={{ marginTop: 12 }}>
+            <Botao
+              titulo={carrinho ? `Continuar compra${carrinho.mercado ? ` no ${carrinho.mercado}` : ''}` : 'Estou no mercado'}
+              onPress={() => definirCarrinho({ mercado: carrinho?.mercado ?? '', precos: carrinho?.precos ?? {}, aberto: true })}
+            />
+          </View>
+        )}
 
         <ListaDaCasa />
         <Compartilhar />

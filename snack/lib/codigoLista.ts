@@ -27,11 +27,11 @@ export const paraMapa = (lista: ItemLista[]): MapaItens => Object.fromEntries(li
 export const doMapa = (m: MapaItens | undefined): ItemLista[] =>
   Object.values(m ?? {}).sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : a.criadoEm > b.criadoEm ? 1 : a.id < b.id ? -1 : 1));
 
-/** O que mudou entre duas versões da lista, item a item (para gravar só o necessário e não apagar o que o outro fez). */
-export function diferencas(antes: ItemLista[], depois: ItemLista[]) {
-  const a = paraMapa(antes);
-  const d = paraMapa(depois);
-  const gravar: ItemLista[] = [];
+/** O que mudou entre duas versões, registro a registro (para gravar só o necessário e não apagar o que o outro fez). */
+export function diferencas<T extends { id: string }>(antes: T[], depois: T[]) {
+  const a: Record<string, T> = Object.fromEntries(antes.map((x) => [x.id, x]));
+  const d: Record<string, T> = Object.fromEntries(depois.map((x) => [x.id, x]));
+  const gravar: T[] = [];
   const apagar: string[] = [];
   for (const [id, item] of Object.entries(d)) if (JSON.stringify(a[id]) !== JSON.stringify(item)) gravar.push(item);
   for (const id of Object.keys(a)) if (!(id in d)) apagar.push(id);
@@ -50,4 +50,17 @@ export function meusItensQueFaltam(minha: ItemLista[], remota: ItemLista[]): Ite
     novos.push(i);
   }
   return novos;
+}
+
+/** Ordem de exibição: notas e ofertas mais recentes primeiro. */
+export const ordenarNotas = <T extends { id: string; data: string }>(l: T[]) =>
+  [...l].sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : a.id < b.id ? 1 : -1));
+export const ordenarOfertas = <T extends { id: string; criadoEm?: string }>(l: T[]) =>
+  [...l].sort((a, b) => ((a.criadoEm ?? '') < (b.criadoEm ?? '') ? 1 : (a.criadoEm ?? '') > (b.criadoEm ?? '') ? -1 : a.id < b.id ? 1 : -1));
+
+/** Junta registros pelo id: os da base ganham; os que só existem aqui entram. Devolve também o que precisa subir. */
+export function juntarPorId<T extends { id: string }>(local: T[], remoto: T[]) {
+  const ids = new Set(remoto.map((x) => x.id));
+  const subir = local.filter((x) => !ids.has(x.id));
+  return { todos: [...remoto, ...subir], subir };
 }

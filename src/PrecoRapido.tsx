@@ -3,6 +3,7 @@ import { Linking, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { mercadosConhecidos, numeroOuNulo, reais } from './lib/logic';
 import { linkBusca, MERCADOS, NOMES_MERCADOS } from './lib/mercados';
+import { HistoricoPreco } from './HistoricoPreco';
 import { useLoja } from './store';
 import { Botao, Campo, Chip, cores, s } from './ui';
 
@@ -58,6 +59,7 @@ export function PrecoRapido({ item, aoFechar }: { item: string; aoFechar: () => 
 
   return (
     <View style={{ paddingHorizontal: 14, paddingBottom: 14, paddingTop: 4, gap: 10, backgroundColor: '#FAFBFA', borderBottomWidth: 1, borderBottomColor: '#EEF1EF' }}>
+      <HistoricoPreco item={item} />
       <Botao tipo="secundario" titulo="Buscar no Menor Preço Brasil" onPress={buscar} />
       <Text style={[s.detalhe, { lineHeight: 17 }]}>Ver preço no site de:</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>

@@ -1,15 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function codigoValido(c) {
+      return c.matches('^[2-9A-HJ-KMNP-Z]{8}$');
+    }
+
     // Lista da casa: só quem sabe o código (8 letras/números) lê ou altera. Ninguém consegue listar os códigos existentes.
     match /listas/{codigo} {
-      allow get: if codigo.matches('^[2-9A-HJ-KMNP-Z]{8}$');
-      allow create, update: if codigo.matches('^[2-9A-HJ-KMNP-Z]{8}$')
+      allow get: if codigoValido(codigo);
+      allow create, update: if codigoValido(codigo)
         && request.resource.data.keys().hasOnly(['itens', 'atualizadoEm'])
         && request.resource.data.itens is map
         && request.resource.data.itens.size() <= 500;
       allow list, delete: if false;
+
+      // Notas fiscais e preços anotados da casa
+      match /{colecao}/{id} {
+        allow read, delete: if codigoValido(codigo) && colecao in ['notas', 'ofertas'];
+        allow create, update: if codigoValido(codigo) && colecao in ['notas', 'ofertas']
+          && request.resource.data.id == id;
+      }
+
+      // Clubes e meta de gastos da casa
+      match /config/casa {
+        allow get: if codigoValido(codigo);
+        allow create, update: if codigoValido(codigo)
+          && request.resource.data.keys().hasOnly(['clubes', 'orcamento']);
+      }
     }
+
     // Qualquer outro caminho: fechado.
     match /{documento=**} {
       allow read, write: if false;
