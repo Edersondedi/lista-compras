@@ -206,6 +206,11 @@ export function reais(v: number): string {
   return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+/** "1 item", "3 itens" */
+export function qtdItens(n: number): string {
+  return `${n} ${n === 1 ? 'item' : 'itens'}`;
+}
+
 /** "17,49" ou "17.49" → 17.49; vazio ou inválido → null. */
 export function numeroOuNulo(texto: string): number | null {
   const t = texto.trim().replace(/\s/g, '');

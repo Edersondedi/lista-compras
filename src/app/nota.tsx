@@ -2,8 +2,9 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Clipboard from 'expo-clipboard';
 import { confirmar } from '../confirmar';
-import { casa, mercadosConhecidos, numeroOuNulo, reais } from '../lib/logic';
+import { casa, mercadosConhecidos, numeroOuNulo, qtdItens, reais } from '../lib/logic';
 import { buscarNfce, lerTextoNfce, NotaLida, pareceQrNfce, SEM_NOME } from '../lib/nfce';
 import { ItemNota } from '../lib/types';
 import { useLoja } from '../store';
@@ -65,14 +66,29 @@ export default function TelaNota() {
     setModo('inicio');
     if (lida.mercado === SEM_NOME) {
       abrirEdicao(nova.id, lida.mercado);
-      setMsg(`Nota salva: ${lida.itens.length} itens, ${reais(lida.total)}. Não consegui ler o nome do mercado: escolha ou digite abaixo, no histórico.`);
+      setMsg(`Nota salva: ${qtdItens(lida.itens.length)}, ${reais(lida.total)}. Não consegui ler o nome do mercado: escolha ou digite abaixo, no histórico.`);
     } else {
-      setMsg(`Nota de ${lida.mercado} salva: ${lida.itens.length} itens, ${reais(lida.total)}. ${marcados} itens da lista marcados como comprados.`);
+      setMsg(`Nota de ${lida.mercado} salva: ${qtdItens(lida.itens.length)}, ${reais(lida.total)}. ${marcados === 0 ? 'Nenhum item da lista foi marcado como comprado' : `${qtdItens(marcados)} da lista ${marcados === 1 ? 'marcado' : 'marcados'} como comprado${marcados === 1 ? '' : 's'}`}.`);
     }
   }
 
-  function lerColado() {
-    const texto = link.trim();
+  async function colarNota() {
+    let texto = '';
+    try {
+      texto = await Clipboard.getStringAsync();
+    } catch {
+      setMsg('Não consegui ler a área de transferência. Toque e segure no campo abaixo e escolha Colar.');
+      return;
+    }
+    if (!texto.trim()) {
+      setMsg('A área de transferência está vazia. No Safari, abra a nota, toque e segure no texto > Selecionar Tudo > Copiar, e volte aqui.');
+      return;
+    }
+    lerColado(texto);
+  }
+
+  function lerColado(conteudo?: string) {
+    const texto = (conteudo ?? link).trim();
     if (!texto) return;
     if (pareceQrNfce(texto) && !texto.includes('\n')) {
       travado.current = false;
@@ -128,7 +144,7 @@ export default function TelaNota() {
     const total = Math.round(itens.reduce((a, i) => a + i.valorTotal, 0) * 100) / 100;
     salvarNota({ mercado: mercado.trim(), data: new Date().toISOString(), itens, total, origem: 'manual' });
     const marcados = marcarItensDaLista(itens);
-    setMsg(`Compra em ${mercado.trim()} salva: ${itens.length} itens, ${reais(total)}. ${marcados} itens da lista marcados.`);
+    setMsg(`Compra em ${mercado.trim()} salva: ${qtdItens(itens.length)}, ${reais(total)}. ${qtdItens(marcados)} da lista marcado(s).`);
     setItens([]);
     setMercado('');
     setModo('inicio');
@@ -164,7 +180,11 @@ export default function TelaNota() {
           </View>
         ) : (
           <View style={{ gap: 10, marginTop: 16 }}>
-            <Botao titulo="Escanear QR Code da nota" onPress={abrirCamera} />
+            <Botao titulo="Colar nota copiada do Safari" onPress={colarNota} />
+            <Text style={[s.detalhe, { lineHeight: 17 }]}>
+              Como copiar: aponte a câmera do iPhone para o QR Code do cupom e abra o link. Na página da nota, toque e segure no texto, escolha Selecionar Tudo e depois Copiar.
+            </Text>
+            <Botao tipo="secundario" titulo="Escanear QR Code da nota" onPress={abrirCamera} />
             {modo !== 'manual' && <Botao tipo="secundario" titulo="Digitar compra manualmente" onPress={() => setModo('manual')} />}
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
               <Campo rotulo="Cole o link ou o texto da nota" value={link} onChangeText={setLink} placeholder="Link do QR Code ou texto copiado da página da nota" autoCapitalize="none" autoCorrect={false} multiline style={{ maxHeight: 120, paddingTop: 10 }} />
@@ -173,7 +193,7 @@ export default function TelaNota() {
                   tipo="secundario"
                   titulo="Ler"
                   desabilitado={!link.trim()}
-                  onPress={lerColado}
+                  onPress={() => lerColado()}
                 />
               </View>
             </View>
@@ -209,7 +229,7 @@ export default function TelaNota() {
             <Cartao>
               {notas.map((n) => editando === n.id ? (
                 <View key={n.id} style={[s.linha, { flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
-                  <Campo rotulo={`Mercado desta compra (${n.itens.length} itens, ${reais(n.total)})`} value={nomeEdit} onChangeText={setNomeEdit} placeholder="Ex.: Koch" />
+                  <Campo rotulo={`Mercado desta compra (${qtdItens(n.itens.length)}, ${reais(n.total)})`} value={nomeEdit} onChangeText={setNomeEdit} placeholder="Ex.: Koch" />
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {sugestoesMercado.map((m) => (
                       <Chip key={m} texto={m} ativo={m === nomeEdit} onPress={() => setNomeEdit(m)} />
@@ -236,7 +256,7 @@ export default function TelaNota() {
                   <View style={{ flex: 1 }}>
                     <Text style={[s.textoItem, n.mercado === SEM_NOME && { color: cores.alertaTexto }]}>{n.mercado}</Text>
                     <Text style={s.detalhe}>
-                      {n.data.slice(8, 10)}/{n.data.slice(5, 7)} · {n.itens.length} itens · {n.origem === 'qrcode' ? 'QR Code' : 'digitada'}
+                      {n.data.slice(8, 10)}/{n.data.slice(5, 7)} · {qtdItens(n.itens.length)} · {n.origem === 'qrcode' ? 'QR Code' : 'digitada'}
                     </Text>
                   </View>
                   <Text style={{ fontWeight: '700' }}>{reais(n.total)}</Text>
