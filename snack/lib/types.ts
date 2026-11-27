@@ -55,4 +55,5 @@ export interface Oferta {
   precoOferta: number;
   tipo: 'todos' | 'clube';
   validade?: string; // ISO (dia)
+  fonte?: 'encarte' | 'menorpreco'; // de onde veio o preço
 }

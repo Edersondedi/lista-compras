@@ -104,7 +104,7 @@ export default function TelaPromocoes() {
                       {o.validade ? ` · até ${o.validade.slice(8, 10)}/${o.validade.slice(5, 7)}` : ''}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
-                      <Etiqueta texto={o.tipo === 'clube' ? 'Preço de clube' : 'Para todos'} clube={o.tipo === 'clube'} />
+                      <Etiqueta texto={o.fonte === 'menorpreco' ? 'Menor Preço' : o.tipo === 'clube' ? 'Preço de clube' : 'Para todos'} clube={o.tipo === 'clube'} />
                       {naLista(o.item) && <Etiqueta texto="Na sua lista" destaque />}
                     </View>
                   </View>

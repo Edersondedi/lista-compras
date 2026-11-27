@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { confirmar } from '../confirmar';
+import { PrecoRapido } from '../PrecoRapido';
 import { sugerirAcabando } from '../lib/logic';
 import { CATEGORIAS, Categoria } from '../lib/types';
 import { useLoja } from '../store';
@@ -13,6 +14,7 @@ export default function TelaLista() {
   const [nome, setNome] = useState('');
   const [qtd, setQtd] = useState('');
   const [categoria, setCategoria] = useState<Categoria>('Mercearia');
+  const [precoAberto, setPrecoAberto] = useState<string | null>(null);
 
   const sugestoes = useMemo(() => sugerirAcabando(notas, lista).slice(0, 4), [notas, lista]);
   const pendentes = lista.filter((i) => !i.comprado).length;
@@ -88,31 +90,45 @@ export default function TelaLista() {
           <Secao key={g.categoria} titulo={g.categoria}>
             <Cartao>
               {g.itens.map((i) => (
-                <Pressable
-                  key={i.id}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: i.comprado }}
-                  onPress={() => alternarComprado(i.id)}
-                  onLongPress={() => confirmarRemocao(i.id, i.nome)}
-                  style={s.linha}
-                >
-                  <View
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 6,
-                      borderWidth: 2,
-                      borderColor: cores.verde,
-                      backgroundColor: i.comprado ? cores.verde : 'transparent',
-                    }}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.textoItem, i.comprado && { textDecorationLine: 'line-through', color: cores.secundario }]}>
-                      {i.nome}
-                    </Text>
-                    {!!i.quantidade && <Text style={s.detalhe}>{i.quantidade}</Text>}
+                <View key={i.id}>
+                  <View style={[s.linha, { paddingVertical: 0, paddingRight: 4 }]}>
+                    <Pressable
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: i.comprado }}
+                      onPress={() => alternarComprado(i.id)}
+                      onLongPress={() => confirmarRemocao(i.id, i.nome)}
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}
+                    >
+                      <View
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 6,
+                          borderWidth: 2,
+                          borderColor: cores.verde,
+                          backgroundColor: i.comprado ? cores.verde : 'transparent',
+                        }}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.textoItem, i.comprado && { textDecorationLine: 'line-through', color: cores.secundario }]}>
+                          {i.nome}
+                        </Text>
+                        {!!i.quantidade && <Text style={s.detalhe}>{i.quantidade}</Text>}
+                      </View>
+                    </Pressable>
+                    {!i.comprado && (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Preço de ${i.nome}`}
+                        onPress={() => setPrecoAberto(precoAberto === i.id ? null : i.id)}
+                        style={{ minHeight: 44, minWidth: 64, alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Text style={{ color: cores.verde, fontWeight: '600', fontSize: 13 }}>{precoAberto === i.id ? 'Fechar' : 'Preço'}</Text>
+                      </Pressable>
+                    )}
                   </View>
-                </Pressable>
+                  {precoAberto === i.id && <PrecoRapido item={i.nome} aoFechar={() => setPrecoAberto(null)} />}
+                </View>
               ))}
             </Cartao>
           </Secao>

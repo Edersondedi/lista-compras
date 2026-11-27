@@ -33,7 +33,7 @@ export function casa(itemLista: string, descricao: string): boolean {
 export interface PrecoEncontrado {
   preco: number;
   data: string;
-  origem: 'nota' | 'oferta';
+  origem: 'nota' | 'oferta' | 'menorpreco';
   descricao: string;
 }
 
@@ -70,7 +70,7 @@ export function precoNoMercado(
     if (!casa(item, o.item) || !ofertaValida(o, hoje)) continue;
     if (o.tipo === 'clube' && !temClube) continue;
     if (!melhor || o.precoOferta < melhor.preco) {
-      melhor = { preco: o.precoOferta, data: o.validade ?? hoje.toISOString(), origem: 'oferta', descricao: o.item };
+      melhor = { preco: o.precoOferta, data: o.validade ?? hoje.toISOString(), origem: o.fonte === 'menorpreco' ? 'menorpreco' : 'oferta', descricao: o.item };
     }
   }
   return melhor;

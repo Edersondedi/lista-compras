@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { compararMercados, melhorDivisao, reais } from '../lib/logic';
+import { compararMercados, melhorDivisao, qtdItens, reais } from '../lib/logic';
 import { useLoja } from '../store';
 import { Aviso, Cartao, Secao, cores, s } from '../ui';
 
@@ -41,7 +41,7 @@ export default function TelaComparar() {
               <Text style={{ color: '#FFFFFF', fontSize: 26, fontWeight: '700' }}>{reais(melhor.total)}</Text>
             </View>
             <Text style={{ color: '#FFFFFF', fontSize: 13 }}>
-              {melhor.encontrados} de {pendentes.length} itens com preço
+              {melhor.encontrados} de {qtdItens(pendentes.length)} com preço
               {pior && pior !== melhor ? ` · ${reais(pior.total - melhor.total)} a menos que ${pior.mercado}` : ''}
             </Text>
           </View>
@@ -62,7 +62,7 @@ export default function TelaComparar() {
                       r.precos[i.id] ? (
                         <Text key={i.id} style={s.detalhe}>
                           {i.nome}: {reais(r.precos[i.id].preco)}
-                          {r.precos[i.id].origem === 'oferta' ? ' (oferta)' : ` (nota de ${dataCurta(r.precos[i.id].data)})`}
+                          {r.precos[i.id].origem === 'menorpreco' ? ' (anotado do Menor Preço)' : r.precos[i.id].origem === 'oferta' ? ' (oferta)' : ` (nota de ${dataCurta(r.precos[i.id].data)})`}
                         </Text>
                       ) : null,
                     )}

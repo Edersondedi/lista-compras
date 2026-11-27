@@ -45,6 +45,12 @@ describe('compararMercados', () => {
     expect(comClube[0]).toMatchObject({ mercado: 'Mercado A', total: 49.89 });
   });
 
+  it('preço anotado do Menor Preço entra na comparação com a origem certa', () => {
+    const ofertas: Oferta[] = [{ id: 'm', item: 'café', mercado: 'Koch', precoOferta: 18.5, tipo: 'todos', validade: '2026-11-30', fonte: 'menorpreco' }];
+    const koch = compararMercados(lista, notas, ofertas, [], hoje).find((x) => x.mercado === 'Koch')!;
+    expect(koch.precos['2']).toMatchObject({ preco: 18.5, origem: 'menorpreco' });
+  });
+
   it('ignora oferta vencida', () => {
     const ofertas: Oferta[] = [{ id: 'o', item: 'café', mercado: 'Mercado A', precoOferta: 1, tipo: 'todos', validade: '2026-11-26' }];
     expect(compararMercados(lista, notas, ofertas, [], hoje).find((x) => x.mercado === 'Mercado A')!.total).toBe(54.3);
