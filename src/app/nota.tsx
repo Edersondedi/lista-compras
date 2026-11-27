@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Clipboard from 'expo-clipboard';
 import { confirmar } from '../confirmar';
@@ -26,6 +27,7 @@ export default function TelaNota() {
   const [editando, setEditando] = useState<string | null>(null);
   const [nomeEdit, setNomeEdit] = useState('');
   const [dataEdit, setDataEdit] = useState('');
+  const [aberta, setAberta] = useState<string | null>(null);
   const [progresso, setProgresso] = useState(0);
   const [cupom, setCupom] = useState<CupomLido | null>(null);
   const [dataManual, setDataManual] = useState(dataBr(new Date().toISOString()));
@@ -297,27 +299,78 @@ export default function TelaNota() {
                   </View>
                 </View>
               ) : (
-                <Pressable
-                  key={n.id}
-                  accessibilityRole="button"
-                  accessibilityHint="Toque para corrigir mercado e data; segure para excluir"
-                  onPress={() => abrirEdicao(n.id, n.mercado)}
-                  onLongPress={() =>
-                    confirmar('Excluir compra', `Apagar a compra de ${n.mercado}? Os preços dela saem da comparação.`, 'Excluir', () => removerNota(n.id))
-                  }
-                  style={s.linha}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.textoItem, n.mercado === SEM_NOME && { color: cores.alertaTexto }]}>{n.mercado}</Text>
-                    <Text style={s.detalhe}>
-                      {dataBr(n.data)} · {qtdItens(n.itens.length)} · {n.origem === 'qrcode' ? 'QR Code' : n.origem === 'foto' ? 'foto' : 'digitada'}
-                    </Text>
-                  </View>
-                  <Text style={{ fontWeight: '700' }}>{reais(n.total)}</Text>
-                </Pressable>
+                <View key={n.id}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: aberta === n.id }}
+                    accessibilityHint="Toque para ver os produtos; segure para excluir"
+                    onPress={() => setAberta(aberta === n.id ? null : n.id)}
+                    onLongPress={() =>
+                      confirmar('Excluir compra', `Apagar a compra de ${n.mercado}? Os preços dela saem da comparação.`, 'Excluir', () => removerNota(n.id))
+                    }
+                    style={[s.linha, aberta === n.id && { backgroundColor: cores.verdeClaro, borderBottomWidth: 0 }]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.textoItem, n.mercado === SEM_NOME && { color: cores.alertaTexto }]}>{n.mercado}</Text>
+                      <Text style={s.detalhe}>
+                        {dataBr(n.data)} · {qtdItens(n.itens.length)} · {n.origem === 'qrcode' ? 'QR Code' : n.origem === 'foto' ? 'foto' : 'digitada'}
+                      </Text>
+                    </View>
+                    <Text style={{ fontWeight: '700' }}>{reais(n.total)}</Text>
+                    <Ionicons name={aberta === n.id ? 'chevron-up' : 'chevron-down'} size={18} color={cores.secundario} />
+                  </Pressable>
+                  {aberta === n.id && (
+                    <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 8, backgroundColor: cores.verdeClaro, borderBottomWidth: 1, borderBottomColor: '#EEF1EF' }}>
+                      <Text style={s.detalhe}>
+                        Compra de {new Date(n.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                      <View style={{ backgroundColor: cores.cartao, borderRadius: 10, paddingVertical: 4 }}>
+                        {n.itens.map((it, k) => (
+                          <View
+                            key={k}
+                            style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: k === n.itens.length - 1 ? 0 : 1, borderBottomColor: '#EEF1EF' }}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 14, color: cores.texto }}>{it.descricao}</Text>
+                              <Text style={s.detalhe}>
+                                {String(it.quantidade).replace('.', ',')} {it.unidade.toLowerCase()} × {reais(it.valorUnitario)}
+                              </Text>
+                            </View>
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: cores.texto }}>{reais(it.valorTotal)}</Text>
+                          </View>
+                        ))}
+                        {n.itens.length === 0 && <Text style={[s.detalhe, { padding: 12 }]}>Esta compra não tem produtos registrados.</Text>}
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 15, color: cores.texto }}>Total</Text>
+                        <Text style={{ fontSize: 17, fontWeight: '700', color: cores.texto }}>{reais(n.total)}</Text>
+                      </View>
+                      {Math.abs(n.itens.reduce((a, i) => a + i.valorTotal, 0) - n.total) > 0.05 && (
+                        <Text style={s.detalhe}>
+                          Soma dos produtos: {reais(Math.round(n.itens.reduce((a, i) => a + i.valorTotal, 0) * 100) / 100)} (a diferença costuma ser desconto ou
+                          acréscimo do cupom)
+                        </Text>
+                      )}
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <View style={{ flex: 1 }}>
+                          <Botao tipo="secundario" titulo="Corrigir mercado e data" onPress={() => abrirEdicao(n.id, n.mercado)} />
+                        </View>
+                        <View style={{ width: 110 }}>
+                          <Botao
+                            tipo="secundario"
+                            titulo="Excluir"
+                            onPress={() =>
+                              confirmar('Excluir compra', `Apagar a compra de ${n.mercado}? Os preços dela saem da comparação.`, 'Excluir', () => removerNota(n.id))
+                            }
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </View>
               ))}
             </Cartao>
-            <Text style={[s.detalhe, { textAlign: 'center' }]}>Toque numa compra para corrigir o mercado e a data · segure para excluir</Text>
+            <Text style={[s.detalhe, { textAlign: 'center' }]}>Toque numa compra para ver tudo o que foi comprado</Text>
           </Secao>
         )}
       </ScrollView>

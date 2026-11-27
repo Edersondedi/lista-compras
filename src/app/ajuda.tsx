@@ -66,7 +66,7 @@ const TOPICOS: Topico[] = [
       '"Ler cupom pela foto": fotografe o cupom esticado, bem iluminado e enchendo a tela. Confira os produtos, o mercado e a data antes de salvar.',
       'Cupom comprido: fotografe em partes e salve cada parte.',
       'Também dá para copiar a página da nota no Safari (pelo QR Code) e colar no app, ou digitar a compra.',
-      'No histórico, toque numa compra para corrigir o mercado e a data; segure para apagar.',
+      'No histórico, toque numa compra para ver todos os produtos. Ali mesmo dá para corrigir o mercado e a data ou excluir a compra.',
     ],
   },
   {
