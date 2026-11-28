@@ -14,6 +14,8 @@ const TOPICOS: Topico[] = [
       'Abra o app no Safari e toque em Compartilhar → "Adicionar à Tela de Início". Ele vira um ícone como qualquer app.',
       'Na aba Lista, em "Lista da casa", toque em "Criar lista" e depois em "Convidar" para mandar o link pelo WhatsApp.',
       'Quem recebe toca no link e entra. A partir daí, lista, notas, preços, clubes e meta de gastos ficam iguais nos dois celulares.',
+      'Depois de entrar, adicione o app à Tela de Início pelo Safari. O código da lista vai junto no ícone, e o app abre já na lista da casa.',
+      'Se o link do convite abrir dentro do WhatsApp, toque no ícone de bússola/Safari para abrir no Safari antes de adicionar à Tela de Início.',
     ],
   },
   {
@@ -24,6 +26,7 @@ const TOPICOS: Topico[] = [
       'Toque no item para marcar como comprado. O lápis edita o nome, a quantidade e a categoria; a lixeira remove (dá para desfazer logo em seguida).',
       '"Vocês sempre compram" mostra atalhos dos itens que já entraram na lista mais de uma vez.',
       '"Preço" abre o histórico de preço do item, atalhos para o site de cada mercado e um campo para anotar o preço que você viu.',
+      '"Importar do app Notas": escolha um print da lista do Notas e só os itens com o círculo marcado entram. Também dá para colar o texto da nota.',
     ],
   },
   {

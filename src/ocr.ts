@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import type { PalavraOcr } from './lib/cupom';
+import { circuloPelaCor, LinhaPrint } from './lib/importarNotas';
 
 /**
  * Leitura de texto em fotos (OCR) com o Tesseract.js, rodando no próprio navegador do celular:
@@ -15,7 +16,11 @@ type TessWorker = {
   setParameters: (p: Record<string, string>) => Promise<unknown>;
   recognize: (img: unknown, opts?: object, out?: object) => Promise<{ data: { text: string; blocks: TessBlock[] | null } }>;
 };
-type TessBlock = { paragraphs: { lines: { words: { text: string; bbox: { y0: number; y1: number } }[] }[] }[] };
+type TessBlock = {
+  paragraphs: {
+    lines: { text: string; confidence: number; bbox: { y0: number; y1: number }; words: { text: string; bbox: { y0: number; y1: number } }[] }[];
+  }[];
+};
 
 let carregar: Promise<Tess> | null = null;
 let worker: Promise<TessWorker> | null = null;
@@ -53,13 +58,13 @@ function obterWorker(): Promise<TessWorker> {
   return worker;
 }
 
-/** Abre a câmera (ou a galeria) do celular e devolve a foto escolhida. */
-export function escolherFoto(): Promise<File | null> {
+/** Abre a câmera (ou, com camera=false, a galeria/prints) do celular e devolve a foto escolhida. */
+export function escolherFoto(camera = true): Promise<File | null> {
   return new Promise((ok) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.setAttribute('capture', 'environment');
+    if (camera) input.setAttribute('capture', 'environment');
     input.onchange = () => ok(input.files?.[0] ?? null);
     input.addEventListener('cancel', () => ok(null));
     input.click();
@@ -128,6 +133,82 @@ export async function lerFoto(
         for (const p of b.paragraphs) for (const l of p.lines) for (const x of l.words) palavras.push({ texto: x.text, altura: (x.bbox.y1 - x.bbox.y0) * fator });
     }
     return { texto: textos.join('\n'), palavras };
+  } finally {
+    progresso = null;
+  }
+}
+
+async function abrirImagem(foto: File): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(foto);
+  try {
+    return await new Promise<HTMLImageElement>((ok, erro) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = () => erro(new Error('Não consegui abrir a imagem.'));
+      i.src = url;
+    });
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
+/**
+ * Print de uma lista do app Notas: lê o texto sem a coluna dos círculos e, para cada linha,
+ * olha a faixa da esquerda — círculo amarelo (marcado), círculo cinza (vazio) ou nada (continuação da linha de cima).
+ */
+export async function lerPrintNotas(foto: File, aoProgredir?: (p: number) => void): Promise<LinhaPrint[]> {
+  if (!ocrDisponivel) throw new Error('Importar do Notas funciona na versão do navegador (Safari).');
+  const img = await abrirImagem(foto);
+  const escala = Math.min(1, 1400 / img.width);
+  const W = Math.round(img.width * escala);
+  const H = Math.round(img.height * escala);
+  const tela = document.createElement('canvas');
+  tela.width = W;
+  tela.height = H;
+  const ctx = tela.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, W, H);
+
+  const faixa = Math.round(W * 0.15); // onde ficam os círculos
+  const px = ctx.getImageData(0, 0, faixa, H).data;
+  const amarelos = new Int32Array(H);
+  const tinta = new Int32Array(H);
+  for (let y = 0; y < H; y++) {
+    const fundo = (y * faixa + 2) * 4; // cor de fundo desta linha (modo claro ou escuro)
+    for (let x = 0; x < faixa; x++) {
+      const i = (y * faixa + x) * 4;
+      const r = px[i];
+      const g = px[i + 1];
+      const b = px[i + 2];
+      if (r > 170 && g > 120 && b < 120 && r - b > 80) amarelos[y]++;
+      if (Math.abs(r - px[fundo]) + Math.abs(g - px[fundo + 1]) + Math.abs(b - px[fundo + 2]) > 60) tinta[y]++;
+    }
+  }
+
+  const recorte = document.createElement('canvas');
+  recorte.width = W - faixa;
+  recorte.height = H;
+  recorte.getContext('2d')!.drawImage(tela, faixa, 0, W - faixa, H, 0, 0, W - faixa, H);
+
+  const w = await obterWorker();
+  await w.setParameters({ tessedit_pageseg_mode: '4' });
+  progresso = aoProgredir ?? null;
+  try {
+    const r = await w.recognize(recorte, {}, { text: true, blocks: true });
+    const linhas: LinhaPrint[] = [];
+    for (const b of r.data.blocks ?? [])
+      for (const p of b.paragraphs)
+        for (const l of p.lines) {
+          const y0 = Math.max(0, l.bbox.y0 - 8);
+          const y1 = Math.min(H - 1, l.bbox.y1 + 8);
+          let am = 0;
+          let ti = 0;
+          for (let y = y0; y <= y1; y++) {
+            am += amarelos[y];
+            ti += tinta[y];
+          }
+          linhas.push({ texto: l.text.trim(), confianca: l.confidence, circulo: circuloPelaCor(am, ti, y1 - y0 + 1) });
+        }
+    return linhas;
   } finally {
     progresso = null;
   }

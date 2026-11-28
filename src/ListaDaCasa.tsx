@@ -52,8 +52,11 @@ export function ListaDaCasa() {
     if (!pronto || !syncDisponivel) return;
     iniciarSync();
     const c = codigoDoEndereco();
-    if (c && c !== useLoja.getState().codigoLista) setConvite(c);
-    else if (c) limparEndereco();
+    if (!c) return;
+    const s = useLoja.getState();
+    if (c === s.codigoLista) limparEndereco();
+    else if (!s.codigoLista && !s.lista.length && !s.notas.length && !s.ofertas.length) entrar(c); // nada a juntar: entra direto
+    else setConvite(c);
   }, [pronto]);
 
   if (!syncDisponivel) return null;
@@ -191,4 +194,39 @@ export function ListaDaCasa() {
       {!!msg && <Aviso>{msg}</Aviso>}
     </Cartao>
   );
+}
+
+/** "#casa=K7P2X9AB" no endereço. */
+function codigoDoHash(): string | null {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  const m = window.location.hash.match(/casa=([0-9A-Za-z-]+)/);
+  return m ? lerCodigo(m[1]) : null;
+}
+
+/**
+ * Guarda o código da lista da casa no próprio endereço (#casa=...). No iPhone, o ícone da Tela de Início,
+ * o navegador de dentro do WhatsApp e o Safari guardam dados separados; com o código no endereço,
+ * qualquer um deles volta para a lista da casa sozinho. Usado no layout, vale para todas as abas.
+ */
+export function useCodigoNoEndereco(caminho: string) {
+  const { pronto, codigoLista } = useLoja();
+
+  // Ao abrir: liga a sincronização e, se o endereço tem o código e este aparelho não, entra sozinho.
+  useEffect(() => {
+    if (!pronto || !syncDisponivel) return;
+    iniciarSync();
+    const c = codigoDoHash();
+    if (c && !useLoja.getState().codigoLista) entrarNaLista(c).catch(() => {});
+  }, [pronto]);
+
+  // Mantém o código no endereço em todas as abas (e tira ao sair da lista).
+  useEffect(() => {
+    if (!pronto || Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const atual = codigoDoHash();
+    if (codigoLista && atual !== codigoLista) {
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#casa=${codigoLista}`);
+    } else if (!codigoLista && window.location.hash.includes('casa=')) {
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+    }
+  }, [pronto, codigoLista, caminho]);
 }

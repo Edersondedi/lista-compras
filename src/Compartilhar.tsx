@@ -3,6 +3,7 @@ import { Linking, Platform, Share, Text, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { ItemCompartilhado, lerLista, separarNovos, textoParaEnviar } from './lib/compartilhar';
 import { qtdItens } from './lib/logic';
+import { ImportarNotas } from './ImportarNotas';
 import { useLoja } from './store';
 import { Aviso, Botao, Cartao, cores, s } from './ui';
 
@@ -29,7 +30,7 @@ function limparEndereco() {
 
 export function Compartilhar() {
   const { lista, pronto, receberItens } = useLoja();
-  const [aberto, setAberto] = useState<'enviar' | 'receber' | null>(null);
+  const [aberto, setAberto] = useState<'enviar' | 'receber' | 'notas' | null>(null);
   const [recebidos, setRecebidos] = useState<ItemCompartilhado[] | null>(null);
   const [colado, setColado] = useState('');
   const [aviso, setAviso] = useState('');
@@ -125,6 +126,8 @@ export function Compartilhar() {
           <Botao tipo="secundario" titulo="Receber lista" onPress={() => setAberto(aberto === 'receber' ? null : 'receber')} />
         </View>
       </View>
+      <Botao tipo="secundario" titulo="Importar do app Notas" onPress={() => setAberto(aberto === 'notas' ? null : 'notas')} />
+      {aberto === 'notas' && <ImportarNotas aoFechar={() => setAberto(null)} />}
 
       {aberto === 'enviar' && (
         <Cartao style={{ padding: 14, gap: 10 }}>

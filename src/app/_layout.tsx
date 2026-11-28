@@ -1,12 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ColorValue } from 'react-native';
+import { usePathname } from 'expo-router';
 import { Tabs } from 'expo-router/tabs';
+import { useCodigoNoEndereco } from '../ListaDaCasa';
 import { cores } from '../ui';
 
 type NomeIcone = keyof typeof Ionicons.glyphMap;
 const icone = (nome: NomeIcone) => ({ color, size }: { color: ColorValue; size: number }) => <Ionicons name={nome} color={color as string} size={size} />;
 
 export default function Layout() {
+  useCodigoNoEndereco(usePathname());
   return (
     <Tabs
       screenOptions={{
