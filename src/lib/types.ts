@@ -58,3 +58,13 @@ export interface Oferta {
   fonte?: 'encarte' | 'menorpreco' | 'site'; // de onde veio o preço
   criadoEm?: string; // ISO, quando foi anotada
 }
+
+/** Compra registrada na aba Mercado (preços que a pessoa digitou/fotografou), para conferir com a nota depois. */
+export interface RegistroMercado {
+  id: string;
+  mercado: string;
+  data: string; // ISO
+  itens: { nome: string; quantidade: string; preco: number }[];
+  total: number;
+  semPreco: string[]; // itens pegos sem preço digitado
+}

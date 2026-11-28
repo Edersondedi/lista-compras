@@ -13,7 +13,7 @@ import { Aviso, Botao, Cartao, Chip, Secao, cores, s } from '../ui';
 
 /** Tela de compra: lista na ordem dos corredores, preço pago de cada item e total do carrinho. */
 export default function TelaMercado() {
-  const { lista, notas, ofertas, clubes, carrinho, definirCarrinho, alternarComprado, salvarNota, limparComprados } = useLoja();
+  const { lista, notas, ofertas, clubes, carrinho, definirCarrinho, alternarComprado, salvarNota, salvarRegistro, limparComprados } = useLoja();
   const mercado = carrinho?.mercado ?? '';
   const precos = carrinho?.precos ?? {};
   const mercados = [...new Set([...NOMES_MERCADOS, ...mercadosConhecidos(notas, ofertas)])].filter((m) => !m.startsWith('Mercado ('));
@@ -65,6 +65,14 @@ export default function TelaMercado() {
   }
 
   function finalizar(salvar: boolean) {
+    // guarda o que foi anotado, para conferir com a nota fiscal depois
+    salvarRegistro({
+      mercado: mercado || 'Mercado',
+      data: new Date().toISOString(),
+      itens: comPreco.map((i) => ({ nome: i.nome, quantidade: i.quantidade, preco: numeroOuNulo(precos[i.id])! })),
+      total,
+      semPreco: noCarrinho.filter((i) => !comPreco.includes(i)).map((i) => i.nome),
+    });
     if (salvar) {
       const itens = comPreco.map((i) => {
         const v = numeroOuNulo(precos[i.id])!;
@@ -185,17 +193,22 @@ export default function TelaMercado() {
 
         {noCarrinho.length > 0 && (
           <View style={{ gap: 10, marginTop: 20 }}>
-            <Botao titulo="Finalizar e salvar compra" onPress={() => confirmar(
+            <Botao
+              titulo="Finalizar e conferir com a nota fiscal"
+              onPress={() => finalizar(false)}
+              desabilitado={!mercado}
+            />
+            <Botao tipo="secundario" titulo="Finalizar sem nota (salvar direto em Gastos)" onPress={() => confirmar(
               'Finalizar compra',
               `Salvar ${reais(total)} no ${mercado || 'mercado'} em Gastos e tirar os itens marcados da lista?` +
                 (semPreco > 0 ? ` ${semPreco} item(ns) sem preço não entram no valor.` : ''),
               'Salvar',
               () => finalizar(true),
             )} desabilitado={!mercado} />
-            <Botao tipo="secundario" titulo="Finalizar sem salvar (vou ler a nota fiscal)" onPress={() => finalizar(false)} />
-            {!mercado && <Text style={[s.detalhe, { textAlign: 'center' }]}>Escolha o mercado lá em cima para salvar a compra.</Text>}
-            <Text style={[s.detalhe, { textAlign: 'center' }]}>
-              Se for ler a nota fiscal depois, finalize sem salvar para a compra não contar duas vezes.
+            {!mercado && <Text style={[s.detalhe, { textAlign: 'center' }]}>Escolha o mercado lá em cima para finalizar.</Text>}
+            <Text style={[s.detalhe, { textAlign: 'center', lineHeight: 17 }]}>
+              Vai ler o cupom? Use "conferir com a nota": os preços que você anotou ficam guardados e, depois de ler o cupom na aba Nota fiscal, o app
+              mostra o que bateu e o que foi cobrado diferente. A compra entra em Gastos pela nota.
             </Text>
           </View>
         )}

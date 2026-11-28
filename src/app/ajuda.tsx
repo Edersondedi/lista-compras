@@ -36,7 +36,8 @@ const TOPICOS: Topico[] = [
       'Escolha em qual mercado você está. A lista aparece na ordem dos corredores.',
       'Digite o preço de cada item ou toque na câmera para ler o preço pela foto da etiqueta. O item é marcado como pego.',
       'O total do carrinho fica fixo embaixo. Se o preço estiver acima da média que vocês costumam pagar, o app avisa.',
-      'No fim, "Finalizar e salvar" lança a compra em Gastos. Se for ler o cupom depois, use "Finalizar sem salvar" para não contar duas vezes.',
+      'No fim, use "Finalizar e conferir com a nota fiscal": os preços anotados ficam guardados. Depois de ler o cupom na aba Nota fiscal, o app mostra item por item o que bateu, o que foi cobrado a mais e o que está na nota sem ter sido anotado.',
+      'Sem cupom? "Finalizar sem nota" lança a compra direto em Gastos com os preços que você digitou.',
     ],
   },
   {
@@ -70,6 +71,7 @@ const TOPICOS: Topico[] = [
       'Cupom comprido: fotografe em partes e salve cada parte.',
       'Também dá para copiar a página da nota no Safari (pelo QR Code) e colar no app, ou digitar a compra.',
       'No histórico, toque numa compra para ver todos os produtos. Ali mesmo dá para corrigir o mercado e a data ou excluir a compra.',
+      '"Conferir com o que você anotou no mercado" aparece quando você finalizou uma compra na aba Mercado: toque nela para comparar com a nota.',
     ],
   },
   {

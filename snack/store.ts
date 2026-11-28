@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { normalizar, novoId } from './lib/logic';
-import { Categoria, ItemLista, NotaFiscal, Oferta } from './lib/types';
+import { Categoria, ItemLista, NotaFiscal, Oferta , RegistroMercado } from './lib/types';
 
 interface Estado {
   lista: ItemLista[];
@@ -17,6 +17,10 @@ interface Estado {
   carrinho: { mercado: string; precos: Record<string, string>; aberto: boolean } | null;
   definirOrcamento: (valor: number | null) => void;
   definirCarrinho: (c: { mercado: string; precos: Record<string, string>; aberto: boolean } | null) => void;
+  /** Compras registradas na aba Mercado, para conferir com a nota (só neste aparelho). */
+  registros: RegistroMercado[];
+  salvarRegistro: (r: Omit<RegistroMercado, 'id'>) => void;
+  removerRegistro: (id: string) => void;
   pronto: boolean;
   /** Código da lista compartilhada da casa (null = lista só neste aparelho). */
   codigoLista: string | null;
@@ -58,6 +62,9 @@ export const useLoja = create<Estado>()((set, get) => ({
       ofertas: [],
       clubes: [],
       pronto: false,
+      registros: [],
+      salvarRegistro: (r) => set((s) => ({ registros: [{ ...r, id: novoId() }, ...s.registros].slice(0, 30) })),
+      removerRegistro: (id) => set((s) => ({ registros: s.registros.filter((r) => r.id !== id) })),
       orcamento: null,
       frequencia: {},
       carrinho: null,
@@ -156,6 +163,7 @@ AsyncStorage.getItem(CHAVE)
         orcamento: salvo.orcamento ?? null,
         frequencia: salvo.frequencia ?? {},
         carrinho: salvo.carrinho ?? null,
+        registros: salvo.registros ?? [],
       });
     }
   })
@@ -167,7 +175,7 @@ AsyncStorage.getItem(CHAVE)
 
 useLoja.subscribe((s) => {
   if (!carregado) return; // não sobrescreve os dados salvos antes de lê-los
-  const { lista, notas, ofertas, clubes, codigoLista, orcamento, frequencia, carrinho } = s;
-  const state = { lista, notas, ofertas, clubes, codigoLista, orcamento, frequencia, carrinho };
+  const { lista, notas, ofertas, clubes, codigoLista, orcamento, frequencia, carrinho, registros } = s;
+  const state = { lista, notas, ofertas, clubes, codigoLista, orcamento, frequencia, carrinho, registros };
   AsyncStorage.setItem(CHAVE, JSON.stringify({ state, version: 0 })).catch(() => {});
 });

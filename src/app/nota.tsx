@@ -9,6 +9,7 @@ import { casa, dataBr, lerDataBr, mercadosConhecidos, numeroOuNulo, qtdItens, re
 import { CupomLido, lerCupom } from '../lib/cupom';
 import { ordenarNotas } from '../lib/codigoLista';
 import { RevisarCupom } from '../RevisarCupom';
+import { ConferirCompras } from '../ConferirCompras';
 import { escolherFoto, lerFoto, ocrDisponivel } from '../ocr';
 import { buscarNfce, lerTextoNfce, NotaLida, pareceQrNfce, SEM_NOME } from '../lib/nfce';
 import { ItemNota } from '../lib/types';
@@ -63,7 +64,11 @@ export default function TelaNota() {
     const marcados = marcarItensDaLista(n.itens);
     setCupom(null);
     setModo('inicio');
-    setMsg(`Compra de ${n.mercado} (${dataBr(n.data)}) salva: ${qtdItens(n.itens.length)}, ${reais(n.total)}. ${marcados ? `${qtdItens(marcados)} da lista marcado(s) como comprado.` : ''}`);
+    const temRegistro = useLoja.getState().registros.length > 0;
+    setMsg(
+      `Compra de ${n.mercado} (${dataBr(n.data)}) salva: ${qtdItens(n.itens.length)}, ${reais(n.total)}. ${marcados ? `${qtdItens(marcados)} da lista marcado(s) como comprado.` : ''}` +
+        (temRegistro ? ' Veja abaixo a conferência com o que você anotou no mercado.' : ''),
+    );
   }
 
   // entrada manual
@@ -277,6 +282,8 @@ export default function TelaNota() {
             </Cartao>
           </Secao>
         )}
+
+        {modo !== 'revisar' && <ConferirCompras />}
 
         {notas.length > 0 && (
           <Secao titulo={`Histórico (${notas.length} ${notas.length === 1 ? "compra" : "compras"})`}>
