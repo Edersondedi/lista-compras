@@ -9,21 +9,23 @@ export interface RegistroPreco {
   preco: number; // preço unitário
   origem: 'nota' | 'anotado';
   descricao: string;
+  /** De onde veio, para poder corrigir: preço anotado (oferta) ou produto de uma nota. */
+  ref: { tipo: 'oferta'; id: string } | { tipo: 'nota'; notaId: string; indice: number };
 }
 
 /** Todos os preços conhecidos de um item (notas e preços anotados), do mais recente para o mais antigo. */
 export function historicoPrecos(item: string, notas: NotaFiscal[], ofertas: Oferta[]): RegistroPreco[] {
   const out: RegistroPreco[] = [];
   for (const n of notas) {
-    for (const it of n.itens) {
+    n.itens.forEach((it, indice) => {
       if (it.valorUnitario > 0 && casa(item, it.descricao)) {
-        out.push({ data: n.data, mercado: n.mercado, preco: it.valorUnitario, origem: 'nota', descricao: it.descricao });
+        out.push({ data: n.data, mercado: n.mercado, preco: it.valorUnitario, origem: 'nota', descricao: it.descricao, ref: { tipo: 'nota', notaId: n.id, indice } });
       }
-    }
+    });
   }
   for (const o of ofertas) {
     if (o.precoOferta > 0 && casa(item, o.item)) {
-      out.push({ data: o.criadoEm ?? '', mercado: o.mercado, preco: o.precoOferta, origem: 'anotado', descricao: o.item });
+      out.push({ data: o.criadoEm ?? '', mercado: o.mercado, preco: o.precoOferta, origem: 'anotado', descricao: o.item, ref: { tipo: 'oferta', id: o.id } });
     }
   }
   return out.filter((r) => r.data).sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0));

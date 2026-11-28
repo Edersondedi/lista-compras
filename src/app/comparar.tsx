@@ -5,6 +5,8 @@ import { compararMercados, idadeDias, melhorDivisao, menorPorItem, PrecoEncontra
 import { NOMES_MERCADOS } from '../lib/mercados';
 import { useLoja } from '../store';
 import { PesquisaGuiada } from '../PesquisaGuiada';
+import { HistoricoPreco } from '../HistoricoPreco';
+import { Pressable } from 'react-native';
 import { Aviso, Botao, Cartao, Chip, Secao, cores, s } from '../ui';
 
 const LIMITE_DIAS = 15;
@@ -23,6 +25,7 @@ export default function TelaComparar() {
   const pendentes = lista.filter((i) => !i.comprado);
   const [soRecentes, setSoRecentes] = useState(true);
   const [pesquisando, setPesquisando] = useState(false);
+  const [corrigindo, setCorrigindo] = useState<string | null>(null);
   const resultados = useMemo(
     () => compararMercados(lista, notas, ofertas, clubes, new Date(), soRecentes ? LIMITE_DIAS : undefined),
     [lista, notas, ofertas, clubes, soRecentes],
@@ -89,7 +92,8 @@ export default function TelaComparar() {
           <Secao titulo="Menor preço por item">
             <Cartao>
               {porItem.map(({ item, ofertas }) => (
-                <View key={item.id} style={[s.linha, { alignItems: 'flex-start' }]}>
+                <View key={item.id} style={{ borderBottomWidth: 1, borderBottomColor: '#EEF1EF' }}>
+                <View style={[s.linha, { alignItems: 'flex-start', borderBottomWidth: 0 }]}>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={[s.textoItem, { fontWeight: '600' }]}>{item.nome}</Text>
                     {ofertas.length === 0 ? (
@@ -113,6 +117,23 @@ export default function TelaComparar() {
                     )}
                   </View>
                   {ofertas.length > 0 && <Text style={{ fontWeight: '700', fontSize: 15, color: cores.verde }}>{reais(ofertas[0].preco.preco)}</Text>}
+                </View>
+                {ofertas.length > 0 && (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setCorrigindo(corrigindo === item.id ? null : item.id)}
+                    style={{ paddingHorizontal: 14, paddingBottom: 8, marginTop: -6 }}
+                  >
+                    <Text style={{ fontSize: 13, color: cores.verde, fontWeight: '600' }}>
+                      {corrigindo === item.id ? 'Fechar' : 'Errou algum preço? Corrigir'}
+                    </Text>
+                  </Pressable>
+                )}
+                {corrigindo === item.id && (
+                  <View style={{ paddingHorizontal: 14, paddingBottom: 14 }}>
+                    <HistoricoPreco item={item.nome} />
+                  </View>
+                )}
                 </View>
               ))}
             </Cartao>

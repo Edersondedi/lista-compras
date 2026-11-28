@@ -25,7 +25,7 @@ const TOPICOS: Topico[] = [
       'Digite o item, a quantidade (opcional), escolha a categoria e toque em "Adicionar à lista".',
       'Toque no item para marcar como comprado. O lápis edita o nome, a quantidade e a categoria; a lixeira remove (dá para desfazer logo em seguida).',
       '"Vocês sempre compram" mostra atalhos dos itens que já entraram na lista mais de uma vez.',
-      '"Preço" abre o histórico de preço do item, atalhos para o site de cada mercado e um campo para anotar o preço que você viu.',
+      '"Preço" abre o histórico de preço do item (toque num preço para corrigir ou apagar), atalhos para o site de cada mercado e um campo para anotar o preço que você viu.',
       '"Importar do app Notas": escolha um print da lista do Notas e só os itens com o círculo marcado entram. Também dá para colar o texto da nota.',
     ],
   },

@@ -36,6 +36,8 @@ interface Estado {
 
   salvarOferta: (oferta: Omit<Oferta, 'id'>) => void;
   removerOferta: (id: string) => void;
+  editarOferta: (id: string, preco: number) => void;
+  corrigirPrecoNota: (notaId: string, indice: number, valorUnitario: number) => void;
   alternarClube: (mercado: string) => void;
 }
 
@@ -118,6 +120,17 @@ export const useLoja = create<Estado>()((set, get) => ({
 
       salvarOferta: (oferta) => set((s) => ({ ofertas: [{ ...oferta, id: novoId(), criadoEm: new Date().toISOString() }, ...s.ofertas] })),
       removerOferta: (id) => set((s) => ({ ofertas: s.ofertas.filter((o) => o.id !== id) })),
+      editarOferta: (id, preco) => set((s) => ({ ofertas: s.ofertas.map((o) => (o.id === id ? { ...o, precoOferta: preco } : o)) })),
+      corrigirPrecoNota: (notaId, indice, valorUnitario) =>
+        set((s) => ({
+          notas: s.notas.map((n) => {
+            if (n.id !== notaId || !n.itens[indice]) return n;
+            const antigo = n.itens[indice];
+            const valorTotal = Math.round(antigo.quantidade * valorUnitario * 100) / 100;
+            const itens = n.itens.map((it, k) => (k === indice ? { ...it, valorUnitario, valorTotal } : it));
+            return { ...n, itens, total: Math.round((n.total - antigo.valorTotal + valorTotal) * 100) / 100 };
+          }),
+        })),
       alternarClube: (mercado) => {
         const tem = get().clubes.includes(mercado);
         set((s) => ({ clubes: tem ? s.clubes.filter((c) => c !== mercado) : [...s.clubes, mercado] }));
