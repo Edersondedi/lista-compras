@@ -1,23 +1,32 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from '../nav';
-import { confirmar } from '../confirmar';
 import { Compartilhar } from '../Compartilhar';
 import { ListaDaCasa } from '../ListaDaCasa';
 import { itensFrequentes } from '../lib/gastos';
 import { PrecoRapido } from '../PrecoRapido';
 import { sugerirAcabando } from '../lib/logic';
-import { CATEGORIAS, Categoria } from '../lib/types';
+import { CATEGORIAS, Categoria, ItemLista } from '../lib/types';
 import { useLoja } from '../store';
 import { Aviso, Botao, Campo, Cartao, Chip, Secao, cores, s } from '../ui';
 
 export default function TelaLista() {
-  const { lista, notas, frequencia, adicionarItem, alternarComprado, removerItem, limparComprados } = useLoja();
+  const { lista, notas, frequencia, adicionarItem, alternarComprado, removerItem, editarItem, restaurarItem, limparComprados } = useLoja();
   const [nome, setNome] = useState('');
   const [qtd, setQtd] = useState('');
   const [categoria, setCategoria] = useState<Categoria>('Mercearia');
   const [precoAberto, setPrecoAberto] = useState<string | null>(null);
+  const [editando, setEditando] = useState<{ id: string; nome: string; quantidade: string; categoria: Categoria } | null>(null);
+  const [removido, setRemovido] = useState<ItemLista | null>(null);
+
+  // o aviso "Desfazer" some sozinho depois de alguns segundos
+  useEffect(() => {
+    if (!removido) return;
+    const t = setTimeout(() => setRemovido(null), 6000);
+    return () => clearTimeout(t);
+  }, [removido]);
 
   const frequentes = useMemo(() => itensFrequentes(frequencia, lista), [frequencia, lista]);
   const sugestoes = useMemo(() => sugerirAcabando(notas, lista).slice(0, 4), [notas, lista]);
@@ -34,8 +43,17 @@ export default function TelaLista() {
     setQtd('');
   }
 
-  function confirmarRemocao(id: string, item: string) {
-    confirmar('Remover item', `Tirar "${item}" da lista?`, 'Remover', () => removerItem(id));
+  function remover(item: ItemLista) {
+    removerItem(item.id);
+    setRemovido(item);
+    if (editando?.id === item.id) setEditando(null);
+    if (precoAberto === item.id) setPrecoAberto(null);
+  }
+
+  function salvarEdicao() {
+    if (!editando || !editando.nome.trim()) return;
+    editarItem(editando.id, editando);
+    setEditando(null);
   }
 
   return (
@@ -115,7 +133,7 @@ export default function TelaLista() {
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: i.comprado }}
                       onPress={() => alternarComprado(i.id)}
-                      onLongPress={() => confirmarRemocao(i.id, i.nome)}
+                      onLongPress={() => remover(i)}
                       style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}
                     >
                       <View
@@ -139,13 +157,65 @@ export default function TelaLista() {
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`Preço de ${i.nome}`}
-                        onPress={() => setPrecoAberto(precoAberto === i.id ? null : i.id)}
-                        style={{ minHeight: 44, minWidth: 64, alignItems: 'center', justifyContent: 'center' }}
+                        onPress={() => {
+                          setEditando(null);
+                          setPrecoAberto(precoAberto === i.id ? null : i.id);
+                        }}
+                        style={{ minHeight: 44, minWidth: 52, alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Text style={{ color: cores.verde, fontWeight: '600', fontSize: 13 }}>{precoAberto === i.id ? 'Fechar' : 'Preço'}</Text>
                       </Pressable>
                     )}
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Editar ${i.nome}`}
+                      onPress={() => {
+                        setPrecoAberto(null);
+                        setEditando(editando?.id === i.id ? null : { id: i.id, nome: i.nome, quantidade: i.quantidade, categoria: i.categoria });
+                      }}
+                      style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Ionicons name="create-outline" size={21} color={cores.secundario} />
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remover ${i.nome}`}
+                      onPress={() => remover(i)}
+                      style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Ionicons name="trash-outline" size={20} color={cores.perigo} />
+                    </Pressable>
                   </View>
+                  {editando?.id === i.id && (
+                    <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 10, backgroundColor: cores.verdeClaro }}>
+                      <View style={{ flexDirection: 'row', gap: 10, paddingTop: 10 }}>
+                        <Campo
+                          rotulo="Nome"
+                          value={editando.nome}
+                          onChangeText={(v) => setEditando({ ...editando, nome: v })}
+                          onSubmitEditing={salvarEdicao}
+                          returnKeyType="done"
+                          autoFocus
+                        />
+                        <View style={{ width: 100 }}>
+                          <Campo rotulo="Quantidade" value={editando.quantidade} onChangeText={(v) => setEditando({ ...editando, quantidade: v })} placeholder="2 un" />
+                        </View>
+                      </View>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                        {CATEGORIAS.map((c) => (
+                          <Chip key={c} texto={c} ativo={c === editando.categoria} onPress={() => setEditando({ ...editando, categoria: c })} />
+                        ))}
+                      </ScrollView>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <View style={{ flex: 1 }}>
+                          <Botao tipo="secundario" titulo="Cancelar" onPress={() => setEditando(null)} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Botao titulo="Salvar" onPress={salvarEdicao} desabilitado={!editando.nome.trim()} />
+                        </View>
+                      </View>
+                    </View>
+                  )}
                   {precoAberto === i.id && <PrecoRapido item={i.nome} aoFechar={() => setPrecoAberto(null)} />}
                 </View>
               ))}
@@ -157,10 +227,32 @@ export default function TelaLista() {
           <View style={{ gap: 10, marginTop: 20 }}>
             <Botao titulo={`Comparar preços (${pendentes} ${pendentes === 1 ? "item" : "itens"})`} onPress={() => router.navigate('/comparar')} desabilitado={pendentes === 0} />
             {comprados > 0 && <Botao tipo="secundario" titulo="Limpar itens já comprados" onPress={limparComprados} />}
-            <Text style={[s.detalhe, { textAlign: 'center' }]}>Toque para marcar · segure para remover</Text>
+            <Text style={[s.detalhe, { textAlign: 'center' }]}>Toque no item para marcar · lápis para editar · lixeira para remover</Text>
           </View>
         )}
       </ScrollView>
+      {removido && (
+        <View
+          style={{
+            position: 'absolute', left: 12, right: 12, bottom: 12, backgroundColor: '#1D2A23', borderRadius: 10,
+            flexDirection: 'row', alignItems: 'center', paddingLeft: 14, minHeight: 48,
+          }}
+        >
+          <Text style={{ flex: 1, color: '#fff', fontSize: 14 }} numberOfLines={1}>
+            "{removido.nome}" removido
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              restaurarItem(removido);
+              setRemovido(null);
+            }}
+            style={{ paddingHorizontal: 16, minHeight: 48, justifyContent: 'center' }}
+          >
+            <Text style={{ color: '#7FD3A3', fontWeight: '700', fontSize: 14 }}>DESFAZER</Text>
+          </Pressable>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

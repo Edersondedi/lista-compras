@@ -21,7 +21,7 @@ const TOPICOS: Topico[] = [
     titulo: 'Lista',
     passos: [
       'Digite o item, a quantidade (opcional), escolha a categoria e toque em "Adicionar à lista".',
-      'Toque no item para marcar como comprado; segure para apagar.',
+      'Toque no item para marcar como comprado. O lápis edita o nome, a quantidade e a categoria; a lixeira remove (dá para desfazer logo em seguida).',
       '"Vocês sempre compram" mostra atalhos dos itens que já entraram na lista mais de uma vez.',
       '"Preço" abre o histórico de preço do item, atalhos para o site de cada mercado e um campo para anotar o preço que você viu.',
     ],

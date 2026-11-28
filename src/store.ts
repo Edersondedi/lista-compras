@@ -25,6 +25,8 @@ interface Estado {
   receberItens: (itens: { nome: string; quantidade: string; categoria: Categoria }[]) => void;
   alternarComprado: (id: string) => void;
   removerItem: (id: string) => void;
+  editarItem: (id: string, mudancas: { nome: string; quantidade: string; categoria: Categoria }) => void;
+  restaurarItem: (item: ItemLista) => void;
   limparComprados: () => void;
 
   salvarNota: (nota: Omit<NotaFiscal, 'id'>) => NotaFiscal;
@@ -87,6 +89,13 @@ export const useLoja = create<Estado>()((set, get) => ({
       alternarComprado: (id) =>
         set((s) => ({ lista: s.lista.map((i) => (i.id === id ? { ...i, comprado: !i.comprado } : i)) })),
       removerItem: (id) => set((s) => ({ lista: s.lista.filter((i) => i.id !== id) })),
+      editarItem: (id, m) =>
+        set((s) => ({
+          lista: s.lista.map((i) =>
+            i.id === id ? { ...i, nome: m.nome.trim() || i.nome, quantidade: m.quantidade.trim(), categoria: m.categoria } : i,
+          ),
+        })),
+      restaurarItem: (item) => set((s) => (s.lista.some((i) => i.id === item.id) ? s : { lista: [...s.lista, item] })),
       limparComprados: () => set((s) => ({ lista: s.lista.filter((i) => !i.comprado) })),
 
       salvarNota: (nota) => {
