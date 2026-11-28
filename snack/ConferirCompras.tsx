@@ -10,6 +10,7 @@ import { Botao, Cartao, Chip, Secao, cores, s } from './ui';
 
 const VERMELHO = cores.perigo;
 const LARANJA = '#B26A00';
+const comSinal = (v: number) => `${v > 0.009 ? '+' : v < -0.009 ? '-' : ''}${reais(Math.abs(v))}`;
 
 function Detalhe({ registro, nota }: { registro: RegistroMercado; nota: NotaFiscal }) {
   const c = useMemo(() => compararCompra(registro, nota), [registro, nota]);
@@ -22,7 +23,7 @@ function Detalhe({ registro, nota }: { registro: RegistroMercado; nota: NotaFisc
         {[
           ['Anotado no mercado', reais(c.totalAnotado), cores.texto],
           ['Total da nota', reais(c.totalNota), cores.texto],
-          ['Diferença', `${c.diferencaTotal > 0 ? '+' : ''}${reais(c.diferencaTotal)}`, difCor],
+          ['Diferença', comSinal(c.diferencaTotal), difCor],
         ].map(([rot, val, cor]) => (
           <View key={rot} style={{ flex: 1, backgroundColor: cores.cartao, borderRadius: 8, borderWidth: 1, borderColor: cores.borda, padding: 8 }}>
             <Text style={{ fontSize: 11, color: cores.secundario }}>{rot}</Text>
@@ -140,8 +141,7 @@ export function ConferirCompras() {
                 </View>
                 {dif !== null && (
                   <Text style={{ fontWeight: '700', color: dif > 0.009 ? VERMELHO : dif < -0.009 ? cores.verde : cores.texto }}>
-                    {dif > 0 ? '+' : ''}
-                    {reais(dif)}
+                    {comSinal(dif)}
                   </Text>
                 )}
                 <Ionicons name={ativo ? 'chevron-up' : 'chevron-down'} size={18} color={cores.secundario} />
