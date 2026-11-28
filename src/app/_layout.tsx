@@ -3,6 +3,8 @@ import type { ColorValue } from 'react-native';
 import { usePathname } from 'expo-router';
 import { Tabs } from 'expo-router/tabs';
 import { useCodigoNoEndereco } from '../ListaDaCasa';
+import { recarregarNaVersaoNova, useVersaoNova } from '../atualizacao';
+import { Pressable, Text, View } from 'react-native';
 import { cores } from '../ui';
 
 type NomeIcone = keyof typeof Ionicons.glyphMap;
@@ -10,7 +12,18 @@ const icone = (nome: NomeIcone) => ({ color, size }: { color: ColorValue; size: 
 
 export default function Layout() {
   useCodigoNoEndereco(usePathname());
+  const versaoNova = useVersaoNova();
   return (
+    <View style={{ flex: 1 }}>
+    {versaoNova && (
+      <Pressable
+        accessibilityRole="button"
+        onPress={recarregarNaVersaoNova}
+        style={{ backgroundColor: cores.verde, paddingVertical: 10, paddingHorizontal: 14, paddingTop: 44 }}
+      >
+        <Text style={{ color: '#fff', fontWeight: '700', textAlign: 'center' }}>Nova versão do app disponível · toque para atualizar</Text>
+      </Pressable>
+    )}
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -27,5 +40,6 @@ export default function Layout() {
       <Tabs.Screen name="nota" options={{ title: 'Nota fiscal', tabBarIcon: icone('receipt') }} />
       <Tabs.Screen name="ajuda" options={{ title: 'Ajuda', tabBarIcon: icone('help-circle') }} />
     </Tabs>
+    </View>
   );
 }
