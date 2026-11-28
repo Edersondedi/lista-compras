@@ -197,11 +197,14 @@ export function ListaDaCasa() {
 }
 
 /** "#casa=K7P2X9AB" no endereço. */
-function codigoDoHash(): string | null {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-  const m = window.location.hash.match(/casa=([0-9A-Za-z-]+)/);
+function codigoDoHash(hash = typeof window !== 'undefined' ? window.location.hash : ''): string | null {
+  if (Platform.OS !== 'web') return null;
+  const m = hash.match(/casa=([0-9A-Za-z-]+)/);
   return m ? lerCodigo(m[1]) : null;
 }
+
+// Lido assim que o app carrega, antes de o roteador mexer no endereço.
+const HASH_INICIAL = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.hash : '';
 
 /**
  * Guarda o código da lista da casa no próprio endereço (#casa=...). No iPhone, o ícone da Tela de Início,
@@ -215,18 +218,22 @@ export function useCodigoNoEndereco(caminho: string) {
   useEffect(() => {
     if (!pronto || !syncDisponivel) return;
     iniciarSync();
-    const c = codigoDoHash();
+    const c = codigoDoHash(HASH_INICIAL);
     if (c && !useLoja.getState().codigoLista) entrarNaLista(c).catch(() => {});
   }, [pronto]);
 
-  // Mantém o código no endereço em todas as abas (e tira ao sair da lista).
+  // Mantém o código no endereço em todas as abas (e tira ao sair da lista). O roteador reescreve o endereço
+  // ao trocar de aba e ao abrir o app, por isso a conferência se repete de tempos em tempos.
   useEffect(() => {
     if (!pronto || Platform.OS !== 'web' || typeof window === 'undefined') return;
-    const atual = codigoDoHash();
-    if (codigoLista && atual !== codigoLista) {
-      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#casa=${codigoLista}`);
-    } else if (!codigoLista && window.location.hash.includes('casa=')) {
-      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
-    }
+    const ajustar = () => {
+      const atual = codigoDoHash();
+      const base = `${window.location.pathname}${window.location.search}`;
+      if (codigoLista && atual !== codigoLista) window.history.replaceState(window.history.state, '', `${base}#casa=${codigoLista}`);
+      else if (!codigoLista && window.location.hash.includes('casa=')) window.history.replaceState(window.history.state, '', base);
+    };
+    ajustar();
+    const t = setInterval(ajustar, 1000);
+    return () => clearInterval(t);
   }, [pronto, codigoLista, caminho]);
 }
