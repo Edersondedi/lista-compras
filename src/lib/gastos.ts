@@ -58,9 +58,9 @@ const PALAVRAS: [Categoria, RegExp][] = [
   ['Higiene', /\b(shampoo|sh |condic|sabonete|creme dent|cr dent|escova dent|fio dental|desod|papel hig|pap hig|absorv|fralda|aparelho de barb|barbear|enxag bucal|hastes|cotonete|protetor sol)/],
   ['Carnes', /\b(carne|bov|frango|file|peito|coxa|sobrecoxa|asa|alcatra|patinho|acem|costela|picanha|linguica|lingui|suin|pernil|lombo|bacon|calabresa|carne moida|moida|hamburg|almondega|peixe|tilapia|salsicha)/],
   ['Frios e laticínios', /\b(leite|queijo|qjo|iogurte|iog|requeij|manteiga|margarina|presunto|mortadela|salame|creme de leite|cr leite|nata|ricota|mussarela|muss|prato|coalhada|bebida lactea)/],
-  ['Bebidas', /\b(refri|refrig|coca|guarana|cerveja|cerv|suco|agua min|agua com gas|agua s gas|vinho|energetico|cha pronto|achocolatado liq)/],
+  ['Bebidas', /\b(agua\b|refri|refrig|coca|guarana|cerveja|cerv|suco|agua min|agua com gas|agua s gas|vinho|energetico|cha pronto|achocolatado liq)/],
   ['Hortifrúti', /\b(banana|maca|laranja|limao|mamao|melancia|melao|uva|abacaxi|morango|tomate|batata|cebola|alho|cenoura|alface|repolho|brocolis|abobrinha|abobora|pepino|pimentao|mandioca|aipim|chuchu|beterraba|couve|rucula|ovos|ovo)/],
-  ['Mercearia', /\b(arroz|feijao|acucar|cafe|farinha|oleo|azeite|macarrao|massa|sal|molho|extrato|biscoito|bolacha|bisc|achocolat|aveia|granola|fuba|milho|ervilha|atum|sardinha|maionese|ketchup|mostarda|tempero|vinagre|pao|torrada|gelatina|leite cond|cr de leite|fermento|cereal|chocolate|bombom|pipoca)/],
+  ['Mercearia', /\b(arroz|feijao|acucar|cafe|coco|farinha|oleo|azeite|macarrao|massa|sal|molho|extrato|biscoito|bolacha|bisc|achocolat|aveia|granola|fuba|milho|ervilha|atum|sardinha|maionese|ketchup|mostarda|tempero|vinagre|pao|torrada|gelatina|leite cond|cr de leite|fermento|cereal|chocolate|bombom|pipoca)/],
 ];
 
 /** Categoria do produto: primeiro pelo item da lista que bate com ele, depois por palavras-chave. */

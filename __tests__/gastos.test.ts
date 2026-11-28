@@ -99,3 +99,11 @@ describe('frequentes e corredor', () => {
     expect(g.map((x) => x.categoria)).toEqual(['Hortifrúti', 'Mercearia', 'Carnes']);
   });
 });
+
+describe('categorias extras', () => {
+  it('água e coco', () => {
+    expect(categoriaDoProduto('Água', [])).toBe('Bebidas');
+    expect(categoriaDoProduto('AGUA SANITARIA 1L', [])).toBe('Limpeza');
+    expect(categoriaDoProduto('Coco ralado', [])).toBe('Mercearia');
+  });
+});
