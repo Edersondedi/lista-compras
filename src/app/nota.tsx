@@ -19,7 +19,7 @@ import { Aviso, Botao, Campo, Cartao, Chip, Secao, cores, s } from '../ui';
 type Modo = 'inicio' | 'camera' | 'lendo' | 'manual' | 'foto' | 'revisar';
 
 export default function TelaNota() {
-  const { notas, lista, ofertas, clubes, salvarNota, removerNota, editarNota, alternarComprado } = useLoja();
+  const { notas, lista, ofertas, clubes, salvarNota, removerNota, editarNota, alternarComprado, salvarRegistro } = useLoja();
   const [permissao, pedirPermissao] = useCameraPermissions();
   const [modo, setModo] = useState<Modo>('inicio');
   const [msg, setMsg] = useState<string | null>(null);
@@ -372,6 +372,33 @@ export default function TelaNota() {
                           />
                         </View>
                       </View>
+                      {n.origem === 'manual' && (
+                        <View style={{ gap: 6 }}>
+                          <Botao
+                            titulo="Usar como preços anotados e conferir com a nota fiscal"
+                            onPress={() =>
+                              confirmar(
+                                'Conferir com a nota fiscal',
+                                `Os preços desta compra digitada (${reais(n.total)}) passam para "Conferir com o que você anotou no mercado" e ela sai do histórico e de Gastos, para a compra não contar duas vezes quando a nota fiscal for lida.`,
+                                'Conferir',
+                                () => {
+                                  salvarRegistro({
+                                    mercado: n.mercado,
+                                    data: n.data,
+                                    itens: n.itens.map((i) => ({ nome: i.descricao, quantidade: String(i.quantidade), preco: i.valorTotal })),
+                                    total: n.total,
+                                    semPreco: [],
+                                  });
+                                  removerNota(n.id);
+                                  setAberta(null);
+                                  setMsg('Pronto: a conferência aparece logo abaixo. Se a nota fiscal ainda não foi lida, leia o cupom agora.');
+                                },
+                              )
+                            }
+                          />
+                          <Text style={[s.detalhe, { textAlign: 'center' }]}>Esta compra foi digitada (ou finalizada na aba Mercado).</Text>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>

@@ -66,7 +66,7 @@ const mesmoMercado = (a: string, b: string) => {
 export function notaProvavel(registro: RegistroMercado, notas: NotaFiscal[]): NotaFiscal | null {
   const t = new Date(registro.data).getTime();
   const cands = notas
-    .filter((n) => mesmoMercado(n.mercado, registro.mercado))
+    .filter((n) => n.origem !== 'manual' && mesmoMercado(n.mercado, registro.mercado))
     .map((n) => ({ n, dt: Math.abs(new Date(n.data).getTime() - t) }))
     .filter((c) => c.dt <= 2 * 86_400_000)
     .sort((a, b) => a.dt - b.dt);
